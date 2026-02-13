@@ -7,94 +7,105 @@
 
     <title>{{ config('app.name', 'LATER-X') }}</title>
 
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans bg-gray-100">
 
-    <div class="grid min-h-screen grid-cols-2">
+    <div class="grid min-h-screen grid-cols-1 md:grid-cols-2">
+
+        {{-- LEFT PANEL (Visual/Info) --}}
+        <div class="hidden md:flex flex-col items-center justify-center p-6 text-white md:p-12 bg-gradient-to-br from-green-500 to-green-700">
+            <h1 class="mb-2 text-xl font-bold text-center md:text-4xl md:mb-4">
+                {{ __('Welcome to LATER-X') }}
+            </h1>
+            <p class="text-sm md:text-lg text-center opacity-90 max-w-md">
+                {{ __('A smart decision support system for latex and rubber production, helping farmers make data-driven decisions.') }}
+            </p>
+        </div>
 
         {{-- RIGHT PANEL (Login Card) --}}
         <div class="flex items-center justify-center p-4 md:p-6 bg-green-50">
-            
-            <div class="w-full max-w-[280px] sm:max-w-xs md:max-w-md p-4 sm:p-6 md:p-8 bg-white shadow-lg rounded-2xl">
-                <img src="{{ asset('images/laterx-logo.png') }}" class="w-32 mx-auto sm:w-40 md:w-48 lg:w-56" alt="LATER-X Logo">
+
+            <div class="w-full max-w-[320px] sm:max-w-md p-6 sm:p-8 bg-white shadow-xl rounded-2xl">
                 
-                <p class="mb-4 text-xs text-center text-gray-500 sm:text-sm">
-                    Enter your credentials to access your dashboard
+                {{-- Language Switcher --}}
+                <div class="flex justify-end mb-6 text-xs uppercase tracking-widest">
+                    <a href="{{ route('lang.switch', 'en') }}" 
+                       class="{{ app()->getLocale() == 'en' ? 'text-green-600 font-bold border-b-2 border-green-600' : 'text-gray-400 hover:text-green-500' }} pb-1">
+                        EN
+                    </a>
+                    <span class="mx-3 text-gray-300">|</span>
+                    <a href="{{ route('lang.switch', 'th') }}" 
+                       class="{{ app()->getLocale() == 'th' ? 'text-green-600 font-bold border-b-2 border-green-600' : 'text-gray-400 hover:text-green-500' }} pb-1">
+                        TH
+                    </a>
+                </div>
+
+                <img src="{{ asset('images/laterx-logo.png') }}" class="w-32 mx-auto mb-4 sm:w-40" alt="LATER-X Logo">
+                
+                <p class="mb-6 text-xs text-center text-gray-500 sm:text-sm">
+                    {{ __('Enter your credentials to access your dashboard') }}
                 </p>
 
                 @if(session('error'))
-                    <div class="p-2 mb-4 text-xs text-red-600 rounded sm:text-sm bg-red-50">
+                    <div class="p-3 mb-4 text-xs text-red-600 rounded-lg sm:text-sm bg-red-50 border border-red-100">
                         {{ session('error') }}
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('login') }}" class="space-y-3 sm:space-y-4">
+                <form method="POST" action="{{ route('login') }}" class="space-y-4">
                     @csrf
 
                     {{-- Email --}}
                     <div>
-                        <label for="email" class="block text-xs text-gray-600 sm:text-sm">Email Address</label>
-                        <input id="email" type="email" name="email" required autofocus
-                               class="w-full mt-1 border-gray-300 rounded-lg focus:border-green-500 focus:ring focus:ring-green-200">
+                        <label for="email" class="block text-xs font-medium text-gray-700 sm:text-sm">{{ __('Email Address') }}</label>
+                        <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus
+                               class="w-full mt-1 border-gray-300 rounded-lg focus:border-green-500 focus:ring focus:ring-green-200 transition-all">
                         @error('email')
-                        <p class="mt-1 text-xs text-red-500 sm:text-sm">{{ $message }}</p>
+                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     {{-- Password --}}
                     <div>
-                        <label for="password" class="block text-xs text-gray-600 sm:text-sm">Password</label>
+                        <label for="password" class="block text-xs font-medium text-gray-700 sm:text-sm">{{ __('Password') }}</label>
                         <input id="password" type="password" name="password" required
-                               class="w-full mt-1 border-gray-300 rounded-lg focus:border-green-500 focus:ring focus:ring-green-200">
+                               class="w-full mt-1 border-gray-300 rounded-lg focus:border-green-500 focus:ring focus:ring-green-200 transition-all">
                         @error('password')
-                        <p class="mt-1 text-xs text-red-500 sm:text-sm">{{ $message }}</p>
+                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     {{-- Remember & Forgot --}}
-                    <div class="flex flex-col items-center justify-between text-xs sm:flex-row sm:text-sm">
-                        <label class="flex items-center mb-2 sm:mb-0">
-                            <input type="checkbox" name="remember" class="text-green-600 rounded focus:ring-green-500">
-                            <span class="ml-2 text-gray-600">Remember me</span>
+                    <div class="flex items-center justify-between text-xs sm:text-sm">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" name="remember" class="text-green-600 rounded border-gray-300 focus:ring-green-500">
+                            <span class="ml-2 text-gray-600">{{ __('Remember me') }}</span>
                         </label>
 
-                        <a href="{{ route('password.request') }}" class="text-green-600 hover:underline">
-                            Forgot password?
+                        <a href="{{ route('password.request') }}" class="text-green-600 font-medium hover:underline">
+                            {{ __('Forgot password?') }}
                         </a>
                     </div>
 
                     {{-- Submit --}}
                     <button type="submit"
-                            class="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition">
-                        Sign In
+                            class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-md shadow-green-200 transition transform active:scale-[0.98]">
+                        {{ __('Sign In') }}
                     </button>
 
                     {{-- Register --}}
-                    <p class="mt-4 text-xs text-center text-gray-600 sm:text-sm">
-                        Don’t have an account?
-                        <a href="{{ route('register') }}" class="font-semibold text-green-600 hover:underline">
-                            Register here
+                    <p class="mt-6 text-xs text-center text-gray-600 sm:text-sm">
+                        {{ __("Don't have an account?") }}
+                        <a href="{{ route('register') }}" class="font-bold text-green-600 hover:underline">
+                            {{ __('Register here') }}
                         </a>
                     </p>
                 </form>
             </div>
         </div>
-
-        {{-- LEFT PANEL --}}
-        <div class="flex flex-col items-center justify-center p-6 text-green-800 md:p-12 bg-gradient-to-br from-green-500 to-green-700">
-                <h1 class="mb-2 text-xl font-bold text-center text-white md:text-3xl md:mb-4">
-                    Welcome to LATER-X
-                </h1>
-                
-                <p class="text-xs sm:text-sm md:text-base text-center text-white max-w-[220px] sm:max-w-sm md:max-w-md">
-                    A smart decision support system for latex and rubber production, helping farmers make data-driven decisions.
-                </p>
-        </div>
-
     </div>
 
 </body>

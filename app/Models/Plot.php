@@ -6,7 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class Plot extends Model
 {
-    protected $fillable = ['farmer_id', 'plot_size_rai', 'plot_location', 'notes'];
+    protected $table = 'plots'; // just to be explicit
+
+    protected $fillable = [
+        'farmer_id',
+        'plot_size_rai',
+        'plot_location',
+        'notes',
+    ];
 
     public function farmer()
     {
@@ -16,5 +23,10 @@ class Plot extends Model
     public function productionSummaries()
     {
         return $this->hasMany(ProductionSummary::class);
+    }
+
+    public function latexTransactions()
+    {
+        return $this->hasMany(LatexTransaction::class, 'plot_id', 'id');
     }
 }

@@ -81,6 +81,7 @@ class AdminController extends Controller
     {
         $user->update([
             'is_approved' => true,
+            'approved' => true,
         ]);
 
         return back()->with('success', "$user->name has been approved.");

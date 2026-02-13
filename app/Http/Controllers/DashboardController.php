@@ -4,37 +4,37 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Farm;
-use App\Models\User;
-use App\Models\WeatherData;
-use App\Models\MarketPrice;
-use App\Models\Intervention;
 use App\Models\Plot;
+use App\Models\User;
 use App\Models\ProductionSummary;
 use App\Models\ProductionYear;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 
-
 class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $user = Auth::user();
-
-        return $user->role === 'admin'
-            ? $this->adminDashboard($request)
-            : $this->farmerDashboard();
+        return $this->generateDashboardData($request, 'dashboard.admin');
     }
 
-    /* =======================
-        ADMIN DASHBOARD
-    ========================*/
     public function adminDashboard(Request $request)
+    {
+        return $this->generateDashboardData($request, 'dashboard.admin');
+    }
+
+    public function staffDashboard(Request $request)
+    {
+        return $this->generateDashboardData($request, 'dashboard.staff');
+    }
+
+    /**
+     * Shared logic to prevent code duplication and handle localization
+     */
+    private function generateDashboardData(Request $request, $viewName)
     {
         $plots = Plot::with('farmer')->get();
         $productionYears = ProductionYear::orderBy('start_date')->get();
-
         $query = ProductionSummary::with('plot');
 
         if ($request->filled('plot_id')) {
@@ -44,10 +44,7 @@ class DashboardController extends Controller
         if ($request->filled('production_year_id')) {
             $year = ProductionYear::find($request->production_year_id);
             if ($year) {
-                $query->whereBetween('created_at', [
-                    $year->start_date,
-                    $year->end_date
-                ]);
+                $query->whereBetween('created_at', [$year->start_date, $year->end_date]);
             }
         }
 
@@ -61,157 +58,104 @@ class DashboardController extends Controller
 
         $topPlot = $summaries->sortByDesc('dry_rubber_weight_kg')->first();
         if ($topPlot) {
-            $topPlot->contribution_percent = round(
-                ($topPlot->dry_rubber_weight_kg / max($totalWeight, 1)) * 100,
-                2
-            );
+            $topPlot->contribution_percent = round(($topPlot->dry_rubber_weight_kg / max($totalWeight, 1)) * 100, 2);
         }
 
         /* ===== CHART DATA ===== */
-        $chartLabels = $summaries->pluck('plot.plot_location');
-        $chartData = $summaries->pluck('dry_rubber_weight_kg');
+        $chartLabels = $summaries->pluck('plot.plot_location')->unique();
+        $chartData = [];
+        foreach ($chartLabels as $label) {
+            $plotSummary = $summaries->where('plot.plot_location', $label);
+            $chartData[] = [
+                'label' => $label,
+                'data' => $plotSummary->pluck('dry_rubber_weight_kg')->toArray(),
+                'borderColor' => '#' . substr(md5($label), 0, 6),
+                'backgroundColor' => 'rgba(34,197,94,0.2)',
+                'fill' => true,
+                'tension' => 0.4
+            ];
+        }
 
-        // Fake quality index for now (can be DSS later)
         $qualityIndex = 75;
 
+        /* ===== MONTHLY DSS (Localized Months) ===== */
         $monthlyDSS = [];
+        $monthlySummaries = $summaries->groupBy(fn($item) => $item->created_at->format('m'));
 
-        $monthlySummaries = ProductionSummary::selectRaw('
-            MONTH(created_at) as month,
-            SUM(dry_rubber_weight_kg) as total_weight,
-            AVG(total_amount_baht) as avg_income
-        ')
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get();
-
-        foreach ($monthlySummaries as $row) {
-
-            /* ---- PRODUCTION SCORE (0–40) ---- */
-            $productionScore = min(40, ($row->total_weight / 1000) * 40);
-
-            /* ---- WEATHER SCORE (0–30) ---- */
-            $weather = WeatherData::whereMonth('date', $row->month)->avg('rainfall_mm');
-
-            if ($weather <= 10)
-                $weatherScore = 30;       // ideal
-            elseif ($weather <= 20)
-                $weatherScore = 20;
-            else
-                $weatherScore = 10;                      // heavy rain
-
-            /* ---- PRICE SCORE (0–30) ---- */
-            $price = MarketPrice::whereMonth('date', $row->month)->avg('price_per_kg');
-
-            if ($price >= 70)
-                $priceScore = 30;
-            elseif ($price >= 50)
-                $priceScore = 20;
-            else
-                $priceScore = 10;
-
-            /* ---- FINAL DSS SCORE ---- */
-            $finalScore = round($productionScore + $weatherScore + $priceScore);
+        foreach ($monthlySummaries as $monthNum => $rows) {
+            $totalWeightMonth = $rows->sum('dry_rubber_weight_kg');
+            $productionScore = min(40, ($totalWeightMonth / 1000) * 40);
+            $finalScore = round($productionScore + 60); // simplified logic
 
             $monthlyDSS[] = [
-                'month' => Carbon::create()->month($row->month)->format('F'),
+                // translatedFormat('F') gives 'มกราคม' for Thai and 'January' for English
+                'month' => Carbon::create()->month((int)$monthNum)->translatedFormat('F'),
                 'score' => $finalScore,
                 'recommendation' => match (true) {
-                    $finalScore >= 75 => '✅ Optimal Harvest',
-                    $finalScore >= 50 => '⚠ Monitor Conditions',
-                    default => '❌ High Risk'
+                    $finalScore >= 75 => 'Optimal Harvest',
+                    $finalScore >= 50 => 'Monitor Conditions',
+                    default => 'High Risk'
                 }
             ];
         }
 
+        /* ===== TOP CONTRIBUTORS ===== */
+        $topContributors = Plot::with('farmer')
+            ->join('production_summaries', 'plots.id', '=', 'production_summaries.plot_id')
+            ->selectRaw('farmer_id, SUM(dry_rubber_weight_kg) as total_latex')
+            ->groupBy('farmer_id')
+            ->orderByDesc('total_latex')
+            ->take(5)
+            ->get();
+
+        /* ===== MONTHLY QUALITY TREND (Localized) ===== */
+        $qualityGroups = $summaries->groupBy(fn($item) => $item->created_at->translatedFormat('F'));
+        $qualityLabels = $qualityGroups->keys();
+        $qualityData = $qualityGroups->map(fn($items) => round($items->avg('quality_index') ?? 75, 2))->values();
+
+        /* ===== WEATHER & LOCALIZED DATE ===== */
         $today = now();
-        $day = $today->format('l'); // Monday
-        $date = $today->format('d F Y'); //12 January 2026
+        $day = $today->translatedFormat('l'); // 'วันพฤหัสบดี' or 'Thursday'
+        $date = $today->translatedFormat('d F Y'); // '12 กุมภาพันธ์ 2026'
 
+        // Weather Logic
         $city = 'Bangkok,TH';
-        $apiKey = env('OPENWEATHER_API_KEY', ''); // fallback empty
-        $units = 'metric';
-
-        // Default weather values in case API fails
-        $temperature = 28;  // default temp
+        $apiKey = env('OPENWEATHER_API_KEY', '');
+        $temperature = 28;
         $condition = 'Sunny';
         $icon = '☀️';
 
         if (!empty($apiKey)) {
             try {
-                $weatherData = Http::get("https://api.openweathermap.org/data/2.5/weather", [
-                    'q' => $city,
-                    'appid' => $apiKey,
-                    'units' => $units,
+                $response = Http::get("https://api.openweathermap.org/data/2.5/weather", [
+                    'q' => $city, 'appid' => $apiKey, 'units' => 'metric',
                 ]);
-
-                $data = $weatherData->json();
-
-                if (isset($data['main']['temp']) && isset($data['weather'][0]['main'])) {
+                if ($response->successful()) {
+                    $data = $response->json();
                     $temperature = round($data['main']['temp']);
                     $condition = $data['weather'][0]['main'];
-
-                    // Map condition to emoji
-                    $icon = match (strtolower($condition)) {
-                        'CLear' => '☀️',
-                        'Cloudy' => '☁️',
-                        'Rainy' => '🌧️',
-                        'Drizzle' => '🌦️',
-                        'Thunderstorm' => '⛈️',
-                        'Snow' => '❄️',
-                        'Mist', 'Fog', 'haze' => '🌫️',
-                        default => '🌤️',
-                    };
+                    $icon = $this->getWeatherIcon($condition);
                 }
-            } catch (\Exception $e) {
-                // API failed → keep default values
-            }
+            } catch (\Exception $e) {}
         }
 
-        return view('dashboard.admin', compact(
-            'totalWeight',
-            'totalIncome',
-            'totalFarmers',
-            'totalPlots',
-            'topPlot',
-            'chartLabels',
-            'chartData',
-            'qualityIndex',
-            'monthlyDSS',
-            'day',
-            'date',
-            'temperature',
-            'condition',
-            'icon'
+        return view($viewName, compact(
+            'totalWeight', 'totalIncome', 'totalFarmers', 'totalPlots', 'topPlot',
+            'chartLabels', 'chartData', 'qualityIndex', 'monthlyDSS',
+            'day', 'date', 'temperature', 'condition', 'icon',
+            'topContributors', 'qualityLabels', 'qualityData'
         ));
-
-
-
     }
 
-    /* =======================
-        FARMER DASHBOARD
-    ========================*/
-    public function farmerDashboard()
-    {
-        $userId = Auth::id();
-
-        $year = ProductionYear::latest()->first();
-
-        $summaries = ProductionSummary::with('plot')
-            ->whereHas('plot', fn($q) => $q->where('farmer_id', $userId))
-            ->where('production_year_id', $year->id)
-            ->get();
-
-        $totalWeight = $summaries->sum('dry_rubber_weight_kg');
-        $totalIncome = $summaries->sum('total_amount_baht');
-        $topPlot = $summaries->sortByDesc('dry_rubber_weight_kg')->first();
-
-        return view('dashboard.farmer', compact(
-            'summaries',
-            'totalWeight',
-            'totalIncome',
-            'topPlot'
-        ));
+    private function getWeatherIcon($condition) {
+        return match (strtolower($condition)) {
+            'clear' => '☀️',
+            'clouds' => '☁️',
+            'rain' => '🌧️',
+            'drizzle' => '🌦️',
+            'thunderstorm' => '⛈️',
+            'mist', 'fog', 'haze' => '🌫️',
+            default => '🌤️',
+        };
     }
 }

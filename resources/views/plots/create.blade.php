@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', __('Add New User'))
+@section('title', __('Add Plot'))
 
 @section('content')
 <div class="container mx-auto p-6">
     <div class="bg-white shadow-xl rounded-2xl p-8 space-y-6 max-w-2xl mx-auto">
         {{-- Page Header --}}
-        <h1 class="text-3xl font-extrabold text-green-700">{{ __('Add New User') }}</h1>
+        <h1 class="text-3xl font-extrabold text-green-700">{{ __('Add New Plot') }}</h1>
 
         {{-- Success Alert --}}
         @if(session('success'))
@@ -56,60 +56,50 @@
             </div>
         @endif
 
-        {{-- Add User Form --}}
-        <form action="{{ route('admin.users.store') }}" method="POST" class="space-y-6">
+        {{-- Add Plot Form --}}
+        <form action="{{ route('plots.store') }}" method="POST" class="space-y-6">
             @csrf
 
-            {{-- Name & Email --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block mb-2 font-semibold text-gray-700">{{ __('Name') }}</label>
-                    <input type="text" name="name" value="{{ old('name') }}" 
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
-                        required>
-                </div>
-
-                <div>
-                    <label class="block mb-2 font-semibold text-gray-700">{{ __('Email') }}</label>
-                    <input type="email" name="email" value="{{ old('email') }}" 
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
-                        required>
-                </div>
-            </div>
-
-            {{-- Role & Password --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block mb-2 font-semibold text-gray-700">{{ __('Role') }}</label>
-                    <select name="role" 
-                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
-                            required>
-                        <option value="">{{ __('Select Role') }}</option>
-                        <option value="director" {{ old('role') == 'director' ? 'selected' : '' }}>{{ __('Director') }}</option>
-                        <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>{{ __('Admin') }}</option>
-                        <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>{{ __('Staff') }}</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block mb-2 font-semibold text-gray-700">{{ __('Password') }}</label>
-                    <input type="password" name="password" 
-                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
-                        required>
-                </div>
-            </div>
-
+            {{-- Farmer --}}
             <div>
-                <label class="block mb-2 font-semibold text-gray-700">{{ __('Confirm Password') }}</label>
-                <input type="password" name="password_confirmation" 
-                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
-                    required>
+                <label class="block mb-2 font-semibold text-gray-700">{{ __('Farmer') }}</label>
+                <select name="farmer_id" required
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none">
+                    <option value="">{{ __('Select Farmer') }}</option>
+                    @foreach($farmers as $farmer)
+                        <option value="{{ $farmer->id }}" {{ old('farmer_id') == $farmer->id ? 'selected' : '' }}>
+                            {{ $farmer->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Plot Size & Location --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700">{{ __('Plot Size (Rai)') }}</label>
+                    <input type="number" step="0.01" name="plot_size_rai" value="{{ old('plot_size_rai') }}" required
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block mb-2 font-semibold text-gray-700">{{ __('Plot Location') }}</label>
+                    <input type="text" name="plot_location" value="{{ old('plot_location') }}" required
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none">
+                </div>
+            </div>
+
+            {{-- Notes --}}
+            <div>
+                <label class="block mb-2 font-semibold text-gray-700">{{ __('Notes') }}</label>
+                <textarea name="notes" rows="4"
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none">{{ old('notes') }}</textarea>
             </div>
 
             {{-- Submit Button --}}
-            <button type="submit" 
-                class="w-full py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition duration-300 shadow-md">
-                {{ __('Add User') }}
+            <button type="submit"
+                class="w-full py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition duration-300">
+                {{ __('Add Plot') }}
             </button>
         </form>
     </div>
