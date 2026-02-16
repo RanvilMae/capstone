@@ -58,4 +58,15 @@ class User extends Authenticatable
         return $this->role === $role;
     }
 
+    public function plots()
+    {
+        return $this->hasMany(Plot::class, 'farmer_id');
+    }
+
+    public function productionSummaries()
+    {
+        // A User has many ProductionSummaries THROUGH the Plots table
+        return $this->hasManyThrough(ProductionSummary::class, Plot::class, 'farmer_id', 'plot_id');
+    }
+
 }

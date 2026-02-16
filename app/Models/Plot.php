@@ -15,10 +15,6 @@ class Plot extends Model
         'notes',
     ];
 
-    public function farmer()
-    {
-        return $this->belongsTo(Farmer::class);
-    }
 
     public function productionSummaries()
     {
@@ -28,5 +24,15 @@ class Plot extends Model
     public function latexTransactions()
     {
         return $this->hasMany(LatexTransaction::class, 'plot_id', 'id');
+    }
+
+    public function farmer()
+    {
+        return $this->belongsTo(User::class, 'farmer_id');
+    }
+
+    public function production_summaries()
+    {
+        return $this->hasMany(ProductionSummary::class);
     }
 }

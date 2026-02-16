@@ -154,7 +154,20 @@
     "Add New User": "เพิ่มผู้ใช้งานใหม่",
     "Select Role": "เลือกบทบาท",
     "Director": "ผู้อำนวยการ",
-    "User created successfully": "สร้างผู้ใช้งานสำเร็จแล้ว"
+    "User created successfully": "สร้างผู้ใช้งานสำเร็จแล้ว",
 
+    "Tapping Advisory": "คำแนะนำการกรีดยาง",
+    "Yield Probability": "ความน่าจะเป็นของคุณภาพผลผลิต",
+    "vs 5-Year Average": "เทียบกับค่าเฉลี่ย 5 ปีที่ผ่านมา",
+    "Optimal for Tapping": "เหมาะสำหรับการกรีดยาง",
+    "High Risk of Washout": "ความเสี่ยงสูง (ฝนตกชุก)",
+    "Dormant Season": "ช่วงพักกรีด (ใบผลัดใบ)",
+
+    "7-Day Harvesting Outlook": "พยากรณ์การกรีดยาง 7 วันข้างหน้า",
+    "DSS Active": "ระบบช่วยตัดสินใจทำงานอยู่",
+    "TAP": "กรีดได้",
+    "CAUTION": "เฝ้าระวัง",
+    "SKIP": "งดกรีด",
+    "Mon": "จ.", "Tue": "อ.", "Wed": "พ.", "Thu": "พฤ.", "Fri": "ศ.", "Sat": "ส.", "Sun": "อา."
 
 }
