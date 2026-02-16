@@ -95,13 +95,6 @@ Route::middleware(['auth', 'role:admin', 'approved'])->group(function () {
 Route::middleware(['auth', 'role:staff', 'approved'])->group(function () {
     Route::get('/staff/dashboard', [DashboardController::class, 'staffDashboard'])->name('dashboard.staff');
 
-    // Farmers management for Staff
-    Route::get('/staff/farmer', [FarmerController::class, 'index'])->name('farmer.index');
-    Route::get('/staff/farmer/create', [FarmerController::class, 'create'])->name('farmer.create');
-    Route::post('/staff/farmer', [FarmerController::class, 'store'])->name('farmer.store');
-    Route::get('/staff/farmer/{farmer}/edit', [FarmerController::class, 'edit'])->name('farmer.edit');
-    Route::patch('/staff/farmer/{farmer}', [FarmerController::class, 'update'])->name('farmer.update');
-    Route::delete('/staff/farmer/{farmer}', [FarmerController::class, 'destroy'])->name('farmer.destroy');
 });
 
 // Include auth routes (login, register, forgot password)
