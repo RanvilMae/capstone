@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('plots', function (Blueprint $table) {
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            // This assumes your users table is 'users' and primary key is 'id'
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
         });
     }
 
