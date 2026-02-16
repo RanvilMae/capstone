@@ -52,7 +52,7 @@
                     {{ __('Plot Management') }}
                 </a>
 
-                <a href="{{ route('farmer.index') }}"
+                <a href="{{ route('main.farmer.index') }}"
                    class="block px-6 py-2 rounded {{ request()->routeIs('admin.farmer.*') || request()->routeIs('staff.farmer.index') ? 'bg-green-200 font-semibold text-green-900' : 'hover:bg-green-100' }}">
                     {{ __('Farmers') }}
                 </a>
@@ -103,7 +103,7 @@
                 <a href="{{ route('transactions.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Latex Monitoring') }}</a>
                 <a href="{{ route('transactions.create') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Create Transaction') }}</a>
                 <a href="{{ route('plots.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Plot Management') }}</a>
-                <a href="{{ route('farmer.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Farmers') }}</a>
+                <a href="{{ route('main.farmer.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Farmers') }}</a>
                 @if(auth()->user()->hasRole('admin'))
                     <a href="{{ route('admin.users') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('User Management') }}</a>
                 @endif
