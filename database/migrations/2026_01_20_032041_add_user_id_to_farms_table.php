@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('farms', function (Blueprint $table) {
+        Schema::table('plots', function (Blueprint $table) {
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             // This assumes your users table is 'users' and primary key is 'id'
         });
@@ -19,7 +19,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('farms', function (Blueprint $table) {
+        Schema::table('plots', function (Blueprint $table) {
             $table->dropForeign(['user_id']);
             $table->dropColumn('user_id');
         });
