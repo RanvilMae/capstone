@@ -10,13 +10,16 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function ($middleware) {
+    ->withMiddleware(function (Middleware $middleware) {
+        // 1. TRUST PROXIES (Critical for Railway 419 errors)
+        $middleware->trustProxies(at: '*');
+
+        // 2. YOUR CUSTOM MIDDLEWARE
         $middleware->alias([
             'approved' => \App\Http\Middleware\Approved::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
-    })
-    ->withMiddleware(function (Middleware $middleware) {
+
         $middleware->web(append: [
             \App\Http\Middleware\LanguageMiddleware::class,
         ]);
