@@ -9,7 +9,7 @@
         {{-- Page Header --}}
         <div class="flex flex-col md:flex-row md:justify-between md:items-center">
             <h1 class="text-3xl font-extrabold text-green-700 mb-4 md:mb-0">{{ __('Farmers List') }}</h1>
-            <a href="{{ route('farmer.create') }}"
+            <a href="{{ route('main.farmer.create') }}"
                class="inline-flex items-center px-5 py-2 text-white bg-green-600 rounded-xl hover:bg-green-700 shadow transition duration-300">
                 <i class="fa-solid fa-plus mr-2"></i> {{ __('Add Farmer') }}
             </a>
@@ -44,8 +44,8 @@
                     <tr>
                         <th class="px-6 py-3 text-left">{{ __('Name') }}</th>
                         <th class="px-6 py-3 text-left">{{ __('Email') }}</th>
-                        <th class="px-6 py-3 text-left">{{ __('Phone') }}</th>
-                        <th class="px-6 py-3 text-left">{{ __('Address') }}</th>
+                        <th class="px-6 py-3 text-left">{{ __('Farm Location') }}</th>
+                        <th class="px-6 py-3 text-left">{{ __('Farm Size') }}</th>
                         <th class="px-6 py-3 text-center">{{ __('Actions') }}</th>
                     </tr>
                 </thead>
@@ -54,16 +54,16 @@
                         <tr class="hover:bg-green-50 transition duration-200">
                             <td class="px-6 py-3 font-medium text-gray-800">{{ $farmer->name }}</td>
                             <td class="px-6 py-3 text-gray-600">{{ $farmer->email }}</td>
-                            <td class="px-6 py-3 text-gray-600">{{ $farmer->phone }}</td>
-                            <td class="px-6 py-3 text-gray-600">{{ $farmer->address }}</td>
+                            <td class="px-6 py-3 text-gray-600">{{ $farmer->farm_location }}</td>
+                            <td class="px-6 py-3 text-gray-600">{{ $farmer->farm_size }}</td>
                             <td class="px-6 py-3 flex justify-center gap-2 flex-wrap">
                                 {{-- Edit --}}
-                                <a href="{{ route('farmer.edit', $farmer) }}"
+                                <a href="{{ route('main.farmer.edit', $farmer) }}"
                                    class="inline-flex items-center gap-1 px-3 py-1 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition duration-200">
                                     <i class="fa-solid fa-pen-to-square"></i> {{ __('Edit') }}
                                 </a>
                                 {{-- Delete --}}
-                                <form action="{{ route('farmer.destroy', $farmer) }}" method="POST" class="inline">
+                                <form action="{{ route('main.farmer.destroy', $farmer) }}" method="POST" class="inline">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit"

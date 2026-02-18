@@ -41,7 +41,7 @@ class FarmerController extends Controller
 
         Farmer::create($request->all());
 
-        return redirect()->route('farmer.index')->with('success', 'Farmer added successfully.');
+        return redirect()->route('main.farmer.index')->with('success', 'Farmer added successfully.');
     }
 
     /**
@@ -69,7 +69,7 @@ class FarmerController extends Controller
 
         $farmer->update($request->all());
 
-        return redirect()->route('farmer.index')->with('success', 'Farmer updated successfully.');
+        return redirect()->route('main.farmer.index')->with('success', 'Farmer updated successfully.');
     }
 
     /**
@@ -79,6 +79,6 @@ class FarmerController extends Controller
     {
         $farmer->delete();
 
-        return redirect()->route('farmer.index')->with('success', 'Farmer deleted successfully.');
+        return redirect()->route('main.farmer.index')->with('success', 'Farmer deleted successfully.');
     }
 }

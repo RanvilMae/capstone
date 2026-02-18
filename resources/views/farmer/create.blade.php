@@ -35,7 +35,7 @@
         @endif
 
         {{-- Add Farmer Form --}}
-        <form action="{{ route('farmer.store') }}" method="POST" class="space-y-6">
+        <form action="{{ route('main.farmer.store') }}" method="POST" class="space-y-6">
             @csrf
 
             {{-- Name & Email --}}

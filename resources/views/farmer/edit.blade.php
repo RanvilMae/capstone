@@ -35,7 +35,7 @@
         @endif
 
         {{-- Edit Farmer Form --}}
-        <form action="{{ auth()->user()->hasRole('admin') ? route('admin.farmer.update', $farmer) : route('farmer.update', $farmer) }}" method="POST" class="space-y-6">
+        <form action="{{ route('main.farmer.update', $farmer) }}" method="POST" class="space-y-6">
             @csrf
             @method('PATCH')
 

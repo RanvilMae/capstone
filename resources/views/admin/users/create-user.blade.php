@@ -61,13 +61,13 @@
             @csrf
 
             {{-- Name & Email --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block mb-2 font-semibold text-gray-700">{{ __('Name') }}</label>
-                    <input type="text" name="name" value="{{ old('name') }}" 
+            <div>
+                <label class="block mb-2 font-semibold text-gray-700">{{ __('Name') }}</label>
+                <input type="text" name="name" value="{{ old('name') }}" 
                         class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
                         required>
-                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 <div>
                     <label class="block mb-2 font-semibold text-gray-700">{{ __('Email') }}</label>
@@ -75,10 +75,7 @@
                         class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
                         required>
                 </div>
-            </div>
-
-            {{-- Role & Password --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
                 <div>
                     <label class="block mb-2 font-semibold text-gray-700">{{ __('Role') }}</label>
                     <select name="role" 
@@ -90,6 +87,10 @@
                         <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>{{ __('Staff') }}</option>
                     </select>
                 </div>
+            </div>
+
+            {{-- Role & Password --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 <div>
                     <label class="block mb-2 font-semibold text-gray-700">{{ __('Password') }}</label>
@@ -97,14 +98,15 @@
                         class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
                         required>
                 </div>
-            </div>
-
+                
             <div>
                 <label class="block mb-2 font-semibold text-gray-700">{{ __('Confirm Password') }}</label>
                 <input type="password" name="password_confirmation" 
                     class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
                     required>
             </div>
+            </div>
+
 
             {{-- Submit Button --}}
             <button type="submit" 

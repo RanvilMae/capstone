@@ -57,13 +57,14 @@ Route::middleware(['auth', 'approved'])->group(function () {
 Route::middleware(['auth', 'role:admin', 'approved'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'adminDashboard'])->name('dashboard');
     Route::get('/pending-users', [AdminController::class, 'pendingUsers'])->name('pending-users');
-    Route::patch('/approve-user/{user}', [AdminController::class, 'approve'])->name('approve-user');
+    Route::patch('/approve-user/{user}', [AdminController::class, 'approve'])->name('users.approve');
     Route::patch('/reject-user/{user}', [AdminController::class, 'reject'])->name('reject-user');
 
     // User management
     Route::get('/users', [AdminController::class, 'manageUsers'])->name('users');
     Route::get('/users/create', [AdminController::class, 'createUser'])->name('users.create-user');
     Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
+    Route::patch('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
     Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
     Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
     Route::patch('/users/{id}/restore', [AdminController::class, 'restoreUser'])->name('users.restore');
