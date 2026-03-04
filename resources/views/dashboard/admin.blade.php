@@ -128,7 +128,7 @@
                 </span>
 
                 <p class="text-xs font-bold {{ $day['color'] == 'green' ? 'text-green-600' : ($day['color'] == 'yellow' ? 'text-yellow-600' : 'text-red-600') }}">
-                    {{ __($day['action']) }}
+                    {{ __($day['recommendation']) }}
                 </p>
 
                 <div class="mt-3 w-full bg-gray-200 rounded-full h-1.5">

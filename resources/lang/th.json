@@ -168,6 +168,20 @@
     "TAP": "กรีดได้",
     "CAUTION": "เฝ้าระวัง",
     "SKIP": "งดกรีด",
-    "Mon": "จ.", "Tue": "อ.", "Wed": "พ.", "Thu": "พฤ.", "Fri": "ศ.", "Sat": "ส.", "Sun": "อา."
+    "Mon": "จ.", "Tue": "อ.", "Wed": "พ.", "Thu": "พฤ.", "Fri": "ศ.", "Sat": "ส.", "Sun": "อา.",
 
+    "Precision Tapping": "การกรีดยางที่แม่นยำ",
+    "Smart Decisions.": "การตัดสินใจที่ชาญฉลาด",
+    "Weather Analytics": "การวิเคราะห์สภาพอากาศ",
+    "Yield Prediction": "การพยากรณ์ผลผลิต",
+    "DSS Engine": "ระบบสนับสนุนการตัดสินใจ",
+    "Manage your plantation data.": "จัดการข้อมูลสวนยางของคุณ",
+    "Forgot?": "ลืมรหัสผ่าน?",
+    "Keep me logged in": "ให้ฉันอยู่ในระบบต่อไป",
+    "Access Dashboard": "เข้าสู่แผงควบคุม",
+    "Or": "หรือ",
+    "New to LATER-X?": "ยังไม่มีบัญชี LATER-X?",
+    "Create Account": "สร้างบัญชีใหม่"
 }
+
+

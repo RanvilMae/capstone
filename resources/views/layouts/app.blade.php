@@ -131,7 +131,7 @@
                     <i class="fas fa-bars text-2xl"></i>
                 </button>
                 <h2 class="hidden md:block text-sm font-medium text-gray-500">
-                    {{ __('LATER-X Decision Support System') }}
+                    {{ __('LATER-eX Decision Support System') }}
                 </h2>
             </div>
 

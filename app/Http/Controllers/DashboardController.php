@@ -78,35 +78,51 @@ class DashboardController extends Controller
         $condition = 'Clear';
         $icon = '☀️';
         $rainfallData = [0, 0, 5, 12, 0, 2, 0]; // Simulated weekly rain for the chart
+        $outlook = collect();
+        
 
         if (!empty($apiKey)) {
             try {
-                $weatherResponse = Http::get("https://api.openweathermap.org/data/2.5/weather", [
-                    'q' => $city, 'appid' => $apiKey, 'units' => 'metric',
+                // Fetch 5-day / 3-hour forecast from OpenWeather
+                $forecastResponse = Http::get("https://api.openweathermap.org/data/2.5/forecast", [
+                    'q' => $city, 
+                    'appid' => $apiKey, 
+                    'units' => 'metric'
                 ]);
-                if ($weatherResponse->successful()) {
-                    $wData = $weatherResponse->json();
-                    $temperature = round($wData['main']['temp']);
-                    $condition = $wData['weather'][0]['main'];
-                    $icon = $this->getWeatherIcon($condition);
+
+                if ($forecastResponse->successful()) {
+                    $forecastData = collect($forecastResponse->json()['list']);
+
+                    // Filter to get one forecast per day (selecting midday 12:00:00 as the representative sample)
+                    $outlook = $forecastData->filter(function ($item) {
+                        return str_contains($item['dt_txt'], '12:00:00');
+                    })->take(7)->map(function ($item) {
+                        // Extract rain volume for the last 3 hours if it exists
+                        $rain = $item['rain']['3h'] ?? 0;
+                        $temp = round($item['main']['temp']);
+                        
+                        // Get the Smart Recommendation from your DSS Service
+                        $recommendation = $this->dss->getRecommendation($rain, $temp);
+
+                        return [
+                            'day'  => Carbon::parse($item['dt_txt'])->translatedFormat('D'),
+                            'temp' => $temp,
+                            'rain' => $rain,
+                            'score' => $recommendation['score'],
+                            'recommendation' => $recommendation['recommendation'],
+                            'color' => $recommendation['color'] ?? 'text-gray-500', // Assuming your service returns a UI color
+                        ];
+                    });
                 }
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+                \Log::error("DSS Weather Forecast Error: " . $e->getMessage());
+            }
         }
 
-        // 4. DSS Feature: 7-Day Harvesting Outlook
-        // In a real scenario, you'd fetch 'forecast' from the API. Here we simulate:
-        $outlook = collect([
-            ['day' => 'Mon', 'temp' => 27, 'rain' => 0],
-            ['day' => 'Tue', 'temp' => 26, 'rain' => 1.2],
-            ['day' => 'Wed', 'temp' => 24, 'rain' => 15.5],
-            ['day' => 'Thu', 'temp' => 28, 'rain' => 0],
-            ['day' => 'Fri', 'temp' => 29, 'rain' => 0],
-            ['day' => 'Sat', 'temp' => 27, 'rain' => 4.5],
-            ['day' => 'Sun', 'temp' => 26, 'rain' => 0],
-        ])->map(function($item) {
-            $rec = $this->dss->getRecommendation($item['rain'], $item['temp']);
-            return array_merge($item, $rec);
-        });
+        // Fallback: If API fails, provide empty set or simulated data to prevent view crash
+        if ($outlook->isEmpty()) {
+            $outlook = collect([['day' => 'N/A', 'temp' => '--', 'rain' => 0, 'score' => 0, 'recommendation' => 'No Data', 'color' => 'text-gray-400']]);
+        }
 
         // Current Tapping Score for the Header
         $currentRain = 0; // Should be from API
