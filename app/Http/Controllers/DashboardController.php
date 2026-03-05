@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\Plot;
 use App\Models\User;
-use App\Models\ProductionSummary;
-use App\Models\ProductionYear;
-use App\Services\DSSService; // Ensure you created this service
+use App\Models\LatexTransaction;
+use App\Services\DSSService; 
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Http;
+use App\Imports\LatexProductionImport;
 
 class DashboardController extends Controller
 {
@@ -21,161 +21,181 @@ class DashboardController extends Controller
         $this->dss = $dss;
     }
 
-    public function index(Request $request)
-    {
-        return $this->generateDashboardData($request, 'dashboard.admin');
-    }
-
-    public function adminDashboard(Request $request)
-    {
-        return $this->generateDashboardData($request, 'dashboard.admin');
-    }
-
-    public function staffDashboard(Request $request)
-    {
-        return $this->generateDashboardData($request, 'dashboard.staff');
-    }
+    public function index(Request $request) { return $this->generateDashboardData($request, 'dashboard.admin'); }
+    public function adminDashboard(Request $request) { return $this->generateDashboardData($request, 'dashboard.admin'); }
+    public function staffDashboard(Request $request) { return $this->generateDashboardData($request, 'dashboard.staff'); }
 
     private function generateDashboardData(Request $request, $viewName)
     {
         // 1. Data Fetching
-        $plots = Plot::with('farmer')->get();
-        $productionYears = ProductionYear::orderBy('start_date')->get();
-        $query = ProductionSummary::with('plot');
-
+        $query = LatexTransaction::with('plot');
         if ($request->filled('plot_id')) {
             $query->where('plot_id', $request->plot_id);
         }
+        $allTransactions = $query->orderBy('transaction_date', 'asc')->get();
 
-        $summaries = $query->get();
-
-        // 2. KPI Calculations with Historical Comparison
-        $totalWeight = $summaries->sum('dry_rubber_weight_kg');
-        $totalIncome = $summaries->sum('total_amount_baht');
+        // 2. KPI Calculations
+        $totalWeight = $allTransactions->sum('dry_rubber_weight_kg');
+        $totalIncome = $allTransactions->sum('total_amount'); 
         $totalFarmers = User::where('role', 'farmer')->count();
-        $totalPlots = Plot::count();
+        $totalPlots = max(1, Plot::count());
+        $qualityIndex = round($allTransactions->avg('dry_rubber_content') ?? 75, 1);
 
-        // DSS Feature: Growth vs Historical Average (Simulated 5-year baseline)
-        $historicalAverage = 5000; // This should ideally be a query from past years
-        $growthRate = $historicalAverage > 0 
-            ? round((($totalWeight - $historicalAverage) / $historicalAverage) * 100, 1) 
-            : 0;
+        $overallAvg = LatexTransaction::avg('dry_rubber_weight_kg') ?? 0;
+        $currentAvg = $allTransactions->avg('dry_rubber_weight_kg') ?? 0;
+        $growthRate = ($overallAvg > 0) ? round((($currentAvg - $overallAvg) / $overallAvg) * 100, 1) : 0;
 
-        $topPlot = $summaries->sortByDesc('dry_rubber_weight_kg')->first();
-        if ($topPlot) {
-            $topPlot->contribution_percent = round(($topPlot->dry_rubber_weight_kg / max($totalWeight, 1)) * 100, 2);
-        }
-
-        // 3. Weather & Localized Date
-        $today = now();
-        $day = $today->translatedFormat('l');
-        $date = $today->translatedFormat('d F Y');
-
-        // Weather API Integration
-        $city = 'Krabi,TH'; // Updated to Krabi per your documentation
-        $apiKey = env('OPENWEATHER_API_KEY', '');
-        $temperature = 28;
+        // 3. REAL-TIME WEATHER INITIALIZATION
+        $now = now();
+        $day = $now->translatedFormat('l');
+        $date = $now->translatedFormat('d F Y');
+        $temperature = 28; 
         $condition = 'Clear';
         $icon = '☀️';
-        $rainfallData = [0, 0, 5, 12, 0, 2, 0]; // Simulated weekly rain for the chart
         $outlook = collect();
-        
+        $dssScore = 10; 
 
-        if (!empty($apiKey)) {
+        $apiKey = env('OPENWEATHER_API_KEY');
+
+        if ($apiKey) {
             try {
-                // Fetch 5-day / 3-hour forecast from OpenWeather
-                $forecastResponse = Http::get("https://api.openweathermap.org/data/2.5/forecast", [
-                    'q' => $city, 
-                    'appid' => $apiKey, 
+                $response = Http::get("https://api.openweathermap.org/data/2.5/forecast", [
+                    'q' => 'Krabi,TH',
+                    'appid' => $apiKey,
                     'units' => 'metric'
                 ]);
 
-                if ($forecastResponse->successful()) {
-                    $forecastData = collect($forecastResponse->json()['list']);
+                if ($response->successful()) {
+                    $weatherData = $response->json();
+                    $current = $weatherData['list'][0];
+                    $temperature = round($current['main']['temp']);
+                    $condition = $current['weather'][0]['main'];
+                    $icon = $this->getWeatherIcon($condition);
 
-                    // Filter to get one forecast per day (selecting midday 12:00:00 as the representative sample)
-                    $outlook = $forecastData->filter(function ($item) {
-                        return str_contains($item['dt_txt'], '12:00:00');
-                    })->take(7)->map(function ($item) {
-                        // Extract rain volume for the last 3 hours if it exists
-                        $rain = $item['rain']['3h'] ?? 0;
-                        $temp = round($item['main']['temp']);
-                        
-                        // Get the Smart Recommendation from your DSS Service
-                        $recommendation = $this->dss->getRecommendation($rain, $temp);
+                    // Decision Support Score (Current)
+                    $res = $this->dss->getRecommendation(
+                        $current['rain']['3h'] ?? 0, 
+                        $temperature, 
+                        $current['main']['humidity'] ?? 0, 
+                        $current['wind']['speed'] ?? 0
+                    );
+                    $dssScore = $res['score'];
 
-                        return [
-                            'day'  => Carbon::parse($item['dt_txt'])->translatedFormat('D'),
-                            'temp' => $temp,
-                            'rain' => $rain,
-                            'score' => $recommendation['score'],
-                            'recommendation' => $recommendation['recommendation'],
-                            'color' => $recommendation['color'] ?? 'text-gray-500', // Assuming your service returns a UI color
-                        ];
-                    });
+                    // 7-period outlook
+                    $outlook = collect($weatherData['list'])
+                        ->filter(fn($i) => str_contains($i['dt_txt'], '12:00:00'))
+                        ->take(7)
+                        ->map(function ($item) {
+                            $r = $this->dss->getRecommendation(
+                                $item['rain']['3h'] ?? 0, 
+                                $item['main']['temp'], 
+                                $item['main']['humidity'] ?? 0, 
+                                $item['wind']['speed'] ?? 0
+                            );
+                            
+                            return array_merge($r, [
+                                'day' => Carbon::parse($item['dt_txt'])->translatedFormat('D'),
+                                'temp' => round($item['main']['temp']),
+                                'rain' => $item['rain']['3h'] ?? 0,
+                                'humidity' => $item['main']['humidity'] ?? 0,
+                                'wind' => $item['wind']['speed'] ?? 0,
+                            ]);
+                        });
                 }
-            } catch (\Exception $e) {
-                \Log::error("DSS Weather Forecast Error: " . $e->getMessage());
+            } catch (\Exception $e) { 
+                \Log::error("Weather API Error: " . $e->getMessage()); 
             }
         }
 
-        // Fallback: If API fails, provide empty set or simulated data to prevent view crash
-        if ($outlook->isEmpty()) {
-            $outlook = collect([['day' => 'N/A', 'temp' => '--', 'rain' => 0, 'score' => 0, 'recommendation' => 'No Data', 'color' => 'text-gray-400']]);
-        }
+        // 4. CHART & CORRELATION LOGIC
+        $correlationScore = 0; // Initialize to avoid ErrorException
+        $yieldWarning = null;
+        $chartLabels = []; $productionData = []; $rainfallData = []; $monthlyDSS = [];
+        $krabiRainfallBaseline = ['01'=>35, '02'=>40, '03'=>85, '04'=>160, '05'=>260, '06'=>230, '07'=>280, '08'=>320, '09'=>360, '10'=>310, '11'=>190, '12'=>70];
 
-        // Current Tapping Score for the Header
-        $currentRain = 0; // Should be from API
-        $currentDSS = $this->dss->getRecommendation($currentRain, $temperature);
-        $dssScore = $currentDSS['score'];
-        
-        $qualityIndex = $summaries->avg('quality_index') ?? 75;
-        // 5. Monthly DSS Recommendation Logic
-        $monthlyDSS = [];
-        $monthlySummaries = $summaries->groupBy(fn($item) => $item->created_at->format('m'));
+        $monthlyGroups = $allTransactions->groupBy(fn($item) => Carbon::parse($item->transaction_date)->format('Y-m'));
 
-        foreach ($monthlySummaries as $monthNum => $rows) {
-            $avgWeight = $rows->avg('dry_rubber_weight_kg');
-            $score = min(10, round(($avgWeight / 500) * 10)); // Example score logic
+        foreach ($monthlyGroups as $key => $rows) {
+            $dateObj = Carbon::parse($key);
+            $chartLabels[] = $dateObj->format('M Y');
+            $yield = $rows->sum('dry_rubber_weight_kg') / $totalPlots;
+            $productionData[] = round($yield, 2);
             
+            $monthNum = $dateObj->format('m');
+            $rainfallData[] = $krabiRainfallBaseline[$monthNum] ?? 0;
+
+            $analysis = $this->dss->getMonthlyRecommendation($yield, $rows->avg('dry_rubber_content'));
             $monthlyDSS[] = [
-                'month' => Carbon::create()->month((int)$monthNum)->translatedFormat('F'),
-                'score' => $score,
-                'recommendation' => match (true) {
-                    $score >= 7 => 'Optimal Harvest',
-                    $score >= 4 => 'Monitor Conditions',
-                    default => 'High Risk of Washout'
-                }
+                'month' => $dateObj->format('F Y'),
+                'score' => $analysis['score'],
+                'recommendation' => $analysis['recommendation']
             ];
         }
 
-        // 6. Chart Data
-        $chartLabels = $summaries->pluck('created_at')->map(fn($d) => $d->format('d M'))->unique()->values();
-        $productionData = $summaries->pluck('dry_rubber_weight_kg')->toArray();
+        // Statistical Correlation (Pearson r)
+        if (($count = count($productionData)) > 1) {
+            $meanX = array_sum($rainfallData) / $count;
+            $meanY = array_sum($productionData) / $count;
+            $num = 0; $divX = 0; $divY = 0;
 
-        // 7. Top Contributors
+            for ($i = 0; $i < $count; $i++) {
+                $dX = $rainfallData[$i] - $meanX;
+                $dY = $productionData[$i] - $meanY;
+                $num += ($dX * $dY);
+                $divX += pow($dX, 2);
+                $divY += pow($dY, 2);
+            }
+            $denom = sqrt($divX * $divY);
+            $correlationScore = ($denom != 0) ? ($num / $denom) : 0;
+        }
+
+        // 5. ANOMALY DETECTION & ADVICE
+        if ($correlationScore < -0.6 && $currentAvg < $overallAvg) {
+            $yieldWarning = [
+                'title' => __('Yield Anomaly Detected'),
+                'message' => __('Production trends are deviating from weather expectations. Potential stress detected.'),
+            ];
+        }
+
+        $correlationStrength = match(true) {
+            $correlationScore > 0.3 => __('Positive Correlation'),
+            $correlationScore < -0.3 => __('Negative Correlation (Washout)'),
+            default => __('No Direct Correlation'),
+        };
+
+        $userAdvice = match(true) {
+            $correlationScore > 0.5 => "Rainfall is currently beneficial for latex flow.",
+            $correlationScore < -0.5 => "High risk of 'Washout'—latex yields are dropping significantly.",
+            default => "Production is currently stable relative to rainfall patterns.",
+        };
+
+        $monthlyDSS = array_slice(array_reverse($monthlyDSS), 0, 12);
         $topContributors = User::where('role', 'farmer')
-            ->withSum('productionSummaries as total_latex', 'dry_rubber_weight_kg')
+            ->withSum('latexTransactions as total_latex', 'dry_rubber_weight_kg')
             ->orderByDesc('total_latex')
             ->take(5)
             ->get();
 
         return view($viewName, compact(
-            'totalWeight', 'totalIncome', 'totalFarmers', 'totalPlots', 'topPlot', 'growthRate',
+            'totalWeight', 'totalIncome', 'totalFarmers', 'totalPlots', 'growthRate', 'qualityIndex',
             'chartLabels', 'productionData', 'rainfallData', 'monthlyDSS', 'dssScore',
             'day', 'date', 'temperature', 'condition', 'icon', 'outlook',
-            'topContributors', 'qualityIndex'
+            'topContributors', 'correlationScore', 'correlationStrength', 'userAdvice', 'yieldWarning'
         ));
     }
 
     private function getWeatherIcon($condition) {
         return match (strtolower($condition)) {
-            'clear' => '☀️',
-            'clouds' => '☁️',
-            'rain' => '🌧️',
-            'drizzle' => '🌦️',
-            'thunderstorm' => '⛈️',
-            default => '🌤️',
+            'clear' => '☀️', 'clouds' => '☁️', 'rain' => '🌧️', 'drizzle' => '🌦️', 'thunderstorm' => '⛈️', default => '🌤️',
         };
+    }
+
+    public function uploadExcel(Request $request) {
+        set_time_limit(600);
+        $request->validate(['excel_file' => 'required|mimes:xlsx,xls,csv|max:128000']);
+        try {
+            Excel::import(new LatexProductionImport, $request->file('excel_file'));
+            return back()->with('success', 'Data Integrated Successfully.');
+        } catch (\Exception $e) { return back()->with('error', 'Import failed: ' . $e->getMessage()); }
     }
 }

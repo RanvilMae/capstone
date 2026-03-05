@@ -139,7 +139,7 @@
 
                         <button type="submit"
                                 class="w-full py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg shadow-green-600/20 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
-                            <span>{{ __('Access Dashboard') }}</span>
+                            <span>{{ __('Sign In') }}</span>
                             <i class="fa-solid fa-arrow-right text-sm"></i>
                         </button>
 

@@ -10,6 +10,7 @@ use App\Http\Controllers\MarketPriceController;
 use App\Http\Controllers\PlotController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Session;
+use App\Http\Controllers\ProductionController;
 
 // Redirect '/' to login page
 Route::get('/', fn() => redirect()->route('login'));
@@ -59,6 +60,8 @@ Route::middleware(['auth', 'role:admin', 'approved'])->prefix('admin')->name('ad
     Route::get('/pending-users', [AdminController::class, 'pendingUsers'])->name('pending-users');
     Route::patch('/approve-user/{user}', [AdminController::class, 'approve'])->name('users.approve');
     Route::patch('/reject-user/{user}', [AdminController::class, 'reject'])->name('reject-user');
+
+    Route::post('/production/import', [DashboardController::class, 'uploadExcel'])->name('production.import');
 
     // User management
     Route::get('/users', [AdminController::class, 'manageUsers'])->name('users');
