@@ -24,10 +24,10 @@
 <div x-data="{ sidebarOpen: false }" class="flex">
 
     {{-- Desktop Sidebar --}}
-    <aside class="hidden md:flex flex-col justify-between w-64 h-screen bg-green-50 text-gray-800 shadow fixed">
+    <aside class="fixed flex-col justify-between hidden w-64 h-screen text-gray-800 shadow md:flex bg-green-50">
         <div>
             <div class="p-6">
-                <img src="{{ asset('images/laterx-logo.png') }}" class="mx-auto w-28 mb-2" alt="LATER-X Logo">
+                <img src="{{ asset('images/laterx-logo.png') }}" class="mx-auto mb-2 w-28" alt="LATER-X Logo">
                 <h2 class="text-2xl font-bold text-center text-green-700">{{ config('app.name', 'LATER-X') }}</h2>
             </div>
 
@@ -52,7 +52,7 @@
                     {{ __('Plot Management') }}
                 </a>
 
-                <a href="{{ route('farmer.index') }}"
+                <a href="{{ route('main.farmer.index') }}"
                    class="block px-6 py-2 rounded {{ request()->routeIs('admin.farmer.*') || request()->routeIs('staff.farmer.index') ? 'bg-green-200 font-semibold text-green-900' : 'hover:bg-green-100' }}">
                     {{ __('Farmers') }}
                 </a>
@@ -67,19 +67,19 @@
         </div>
 
         {{-- Profile Dropdown --}}
-        <div x-data="{ open: false }" class="mb-6 px-6 relative">
+        <div x-data="{ open: false }" class="relative px-6 mb-6">
             <button @click="open = !open"
-                    class="flex items-center space-x-2 w-full px-4 py-2 bg-green-200 rounded hover:bg-green-300 transition-colors duration-300">
-                <i class="fas fa-user-circle text-2xl text-green-700"></i>
-                <span class="font-semibold text-green-700 hidden md:block">{{ auth()->user()->name }}</span>
-                <i class="fas fa-chevron-down ml-auto text-green-700"></i>
+                    class="flex items-center w-full px-4 py-2 space-x-2 transition-colors duration-300 bg-green-200 rounded hover:bg-green-300">
+                <i class="text-2xl text-green-700 fas fa-user-circle"></i>
+                <span class="hidden font-semibold text-green-700 md:block">{{ auth()->user()->name }}</span>
+                <i class="ml-auto text-green-700 fas fa-chevron-down"></i>
             </button>
 
             <div x-show="open" @click.away="open = false"
-                 class="absolute bottom-full left-0 mb-2 w-full bg-white border rounded shadow-lg z-50 p-2">
+                 class="absolute left-0 z-50 w-full p-2 mb-2 bg-white border rounded shadow-lg bottom-full">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button type="submit" class="w-full text-left px-4 py-2 text-red-500 hover:bg-red-100 rounded">
+                    <button type="submit" class="w-full px-4 py-2 text-left text-red-500 rounded hover:bg-red-100">
                         {{ __('Logout') }}
                     </button>
                 </form>
@@ -89,12 +89,12 @@
 
     {{-- Mobile Sidebar --}}
     <aside x-show="sidebarOpen" @click.away="sidebarOpen = false"
-           class="fixed inset-y-0 left-0 w-64 bg-green-50 text-gray-800 shadow z-50 flex flex-col justify-between md:hidden">
+           class="fixed inset-y-0 left-0 z-50 flex flex-col justify-between w-64 text-gray-800 shadow bg-green-50 md:hidden">
         <div>
-            <div class="p-6 flex justify-between items-center">
+            <div class="flex items-center justify-between p-6">
                 <img src="{{ asset('images/laterx-logo.png') }}" class="w-28" alt="LATER-X Logo">
                 <button @click="sidebarOpen = false" class="text-gray-600 hover:text-gray-800">
-                    <i class="fas fa-times text-xl"></i>
+                    <i class="text-xl fas fa-times"></i>
                 </button>
             </div>
 
@@ -103,17 +103,17 @@
                 <a href="{{ route('transactions.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Latex Monitoring') }}</a>
                 <a href="{{ route('transactions.create') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Create Transaction') }}</a>
                 <a href="{{ route('plots.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Plot Management') }}</a>
-                <a href="{{ route('farmer.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Farmers') }}</a>
+                <a href="{{ route('main.farmer.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Farmers') }}</a>
                 @if(auth()->user()->hasRole('admin'))
                     <a href="{{ route('admin.users') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('User Management') }}</a>
                 @endif
             </nav>
         </div>
 
-        <div class="mb-6 px-6">
+        <div class="px-6 mb-6">
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button type="submit" class="w-full flex items-center space-x-2 px-4 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100">
+                <button type="submit" class="flex items-center w-full px-4 py-2 space-x-2 text-red-600 rounded bg-red-50 hover:bg-red-100">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>{{ __('Logout') }}</span>
                 </button>
@@ -122,22 +122,22 @@
     </aside>
 
     {{-- Main Content --}}
-    <div class="flex-1 md:ml-64 min-h-screen flex flex-col">
+    <div class="flex flex-col flex-1 min-h-screen md:ml-64">
         
         {{-- TOP BAR --}}
-        <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-10 sticky top-0">
+        <header class="sticky top-0 z-10 flex items-center justify-between h-16 px-8 bg-white shadow-sm">
             <div class="flex items-center">
-                <button @click="sidebarOpen = true" class="text-green-700 md:hidden focus:outline-none mr-4">
-                    <i class="fas fa-bars text-2xl"></i>
+                <button @click="sidebarOpen = true" class="mr-4 text-green-700 md:hidden focus:outline-none">
+                    <i class="text-2xl fas fa-bars"></i>
                 </button>
-                <h2 class="hidden md:block text-sm font-medium text-gray-500">
-                    {{ __('LATER-X Decision Support System') }}
+                <h2 class="hidden text-sm font-medium text-gray-500 md:block">
+                    {{ __('LATER-eX Decision Support System') }}
                 </h2>
             </div>
 
             <div class="flex items-center space-x-4">
                 {{-- Language Switcher --}}
-                <div class="flex bg-gray-100 rounded-lg p-1">
+                <div class="flex p-1 bg-gray-100 rounded-lg">
                     <a href="{{ route('lang.switch', 'en') }}" 
                        class="px-3 py-1 text-xs font-bold rounded-md transition-all {{ app()->getLocale() == 'en' ? 'bg-white shadow text-green-600' : 'text-gray-500 hover:text-green-600' }}">
                         EN
@@ -148,7 +148,7 @@
                     </a>
                 </div>
                 
-                <div class="h-6 w-px bg-gray-200"></div>
+                <div class="w-px h-6 bg-gray-200"></div>
 
             </div>
         </header>

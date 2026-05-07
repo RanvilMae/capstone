@@ -69,4 +69,9 @@ class User extends Authenticatable
         return $this->hasManyThrough(ProductionSummary::class, Plot::class, 'farmer_id', 'plot_id');
     }
 
+    public function latexTransactions()
+    {
+        return $this->hasMany(\App\Models\LatexTransaction::class, 'user_id');
+    }
+
 }

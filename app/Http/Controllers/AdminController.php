@@ -57,6 +57,34 @@ class AdminController extends Controller
             ->with('success', 'User created successfully.');
     }
 
+    public function editUser(User $user)
+    {
+        // This looks for a file at resources/views/admin/users/edit.blade.php
+        return view('admin.users.edit', compact('user'));
+    }
+
+    public function updateUser(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'role' => 'required|in:admin,staff,director,farmer',
+            'password' => 'nullable|string|min:8|confirmed', // Add this
+        ]);
+
+        // Only update password if the admin typed something in
+        if (!empty($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']); // Don't overwrite with null
+        }
+
+        $user->update($data);
+
+        return redirect()->route('admin.users')
+            ->with('success', "User {$user->name} updated successfully.");
+    }
+
 
 
     // ==============================
@@ -84,7 +112,7 @@ class AdminController extends Controller
             'approved' => true,
         ]);
 
-        return back()->with('success', "$user->name has been approved.");
+        return back()->with('success', "{$user->name} has been approved.");
     }
 
     public function reject(Request $request, User $user)
@@ -128,17 +156,17 @@ class AdminController extends Controller
             return response()->json($farmers, Response::HTTP_OK);
         }
 
-        return view('admin.farmer.index', compact('farmers'));
+        return view('main.farmer.index', compact('farmers'));
     }
 
     public function createFarmer()
     {
-        return view('admin.farmer.create');
+        return view('main.farmer.create');
     }
 
     public function editFarmer(Farmer $farmer)
     {
-        return view('admin.farmer.edit', compact('farmer'));
+        return view('main.farmer.edit', compact('farmer'));
     }
 
     public function storeFarmer(Request $request)

@@ -3,8 +3,8 @@
 @section('title', __('Add New User'))
 
 @section('content')
-<div class="container mx-auto p-6">
-    <div class="bg-white shadow-xl rounded-2xl p-8 space-y-6 max-w-2xl mx-auto">
+<div class="container p-6 mx-auto">
+    <div class="max-w-2xl p-8 mx-auto space-y-6 bg-white shadow-xl rounded-2xl">
         {{-- Page Header --}}
         <h1 class="text-3xl font-extrabold text-green-700">{{ __('Add New User') }}</h1>
 
@@ -14,7 +14,7 @@
                 x-data="{ show: true }" 
                 x-show="show" 
                 x-init="setTimeout(() => show = false, 5000)" 
-                class="fixed top-6 right-6 z-50 flex items-center bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg transition transform duration-300"
+                class="fixed z-50 flex items-center px-4 py-3 text-white transition duration-300 transform bg-green-600 rounded-lg shadow-lg top-6 right-6"
                 x-transition:enter="transform ease-out duration-300"
                 x-transition:enter-start="opacity-0 translate-y-2"
                 x-transition:enter-end="opacity-100 translate-y-0"
@@ -36,7 +36,7 @@
                 x-data="{ show: true }" 
                 x-show="show" 
                 x-init="setTimeout(() => show = false, 7000)" 
-                class="fixed top-6 right-6 z-50 flex flex-col bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg space-y-2 transition transform duration-300"
+                class="fixed z-50 flex flex-col px-4 py-3 space-y-2 text-white transition duration-300 transform bg-red-600 rounded-lg shadow-lg top-6 right-6"
                 x-transition:enter="transform ease-out duration-300"
                 x-transition:enter-start="opacity-0 translate-y-2"
                 x-transition:enter-end="opacity-100 translate-y-0"
@@ -44,11 +44,11 @@
                 x-transition:leave-start="opacity-100 translate-y-0"
                 x-transition:leave-end="opacity-0 translate-y-2"
             >
-                <div class="flex justify-between items-center">
+                <div class="flex items-center justify-between">
                     <strong class="font-semibold">{{ __('Please fix the following errors') }}:</strong>
                     <button @click="show = false" class="ml-4 text-white hover:text-gray-200">&times;</button>
                 </div>
-                <ul class="list-disc list-inside text-sm">
+                <ul class="text-sm list-disc list-inside">
                     @foreach ($errors->all() as $error)
                         <li>{{ __($error) }}</li>
                     @endforeach
@@ -61,13 +61,13 @@
             @csrf
 
             {{-- Name & Email --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block mb-2 font-semibold text-gray-700">{{ __('Name') }}</label>
-                    <input type="text" name="name" value="{{ old('name') }}" 
+            <div>
+                <label class="block mb-2 font-semibold text-gray-700">{{ __('Name') }}</label>
+                <input type="text" name="name" value="{{ old('name') }}" 
                         class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
                         required>
-                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 
                 <div>
                     <label class="block mb-2 font-semibold text-gray-700">{{ __('Email') }}</label>
@@ -75,10 +75,7 @@
                         class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
                         required>
                 </div>
-            </div>
-
-            {{-- Role & Password --}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
                 <div>
                     <label class="block mb-2 font-semibold text-gray-700">{{ __('Role') }}</label>
                     <select name="role" 
@@ -90,6 +87,10 @@
                         <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>{{ __('Staff') }}</option>
                     </select>
                 </div>
+            </div>
+
+            {{-- Role & Password --}}
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 
                 <div>
                     <label class="block mb-2 font-semibold text-gray-700">{{ __('Password') }}</label>
@@ -97,18 +98,19 @@
                         class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
                         required>
                 </div>
-            </div>
-
+                
             <div>
                 <label class="block mb-2 font-semibold text-gray-700">{{ __('Confirm Password') }}</label>
                 <input type="password" name="password_confirmation" 
                     class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:outline-none" 
                     required>
             </div>
+            </div>
+
 
             {{-- Submit Button --}}
             <button type="submit" 
-                class="w-full py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition duration-300 shadow-md">
+                class="w-full py-3 font-semibold text-white transition duration-300 bg-green-600 shadow-md rounded-xl hover:bg-green-700">
                 {{ __('Add User') }}
             </button>
         </form>

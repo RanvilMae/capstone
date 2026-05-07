@@ -9,6 +9,7 @@ class Plot extends Model
     protected $table = 'plots'; // just to be explicit
 
     protected $fillable = [
+        'code',
         'farmer_id',
         'plot_size_rai',
         'plot_location',
