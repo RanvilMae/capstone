@@ -31,6 +31,30 @@
     "User Management": "จัดการผู้ใช้งาน",
     "Logout": "ออกจากระบบ",
 
+    "Welcome back": "ยินดีต้อนรับกลับมา",
+    "LATER-X Decision Support is monitoring Krabi latex production trends.": "ระบบสนับสนุนการตัดสินใจ LATER-X กำลังตรวจสอบแนวโน้มการผลิตน้ำยางในกระบี่",
+    "Tapping Advisory": "คำแนะนำการกรีดยาง",
+    "Optimal for Tapping": "เหมาะสมที่สุดสำหรับการกรีด",
+    "Proceed with Caution": "ดำเนินการด้วยความระมัดระวัง",
+    "High Risk of Washout": "ความเสี่ยงสูงที่จะเกิดน้ำยางสูญเสีย (Washout)",
+    
+    "Avg DRC": "ค่าเฉลี่ย DRC",
+    "Total Plots": "จำนวนแปลงทั้งหมด",
+    "Yield Anomaly Detected": "พบความผิดปกติของผลผลิต",
+    "Production trends are deviating from weather expectations. Potential stress detected.": "แนวโน้มการผลิตเบี่ยงเบนไปจากความคาดหมายของสภาพอากาศ พบความเครียดที่อาจเกิดขึ้น",
+    
+    "Production Trend Correlation": "ความสัมพันธ์ของแนวโน้มการผลิต",
+    "Positive Correlation": "ความสัมพันธ์เชิงบวก",
+    "Negative Correlation (Washout)": "ความสัมพันธ์เชิงลบ (Washout)",
+    "No Direct Correlation": "ไม่มีความสัมพันธ์โดยตรง",
+    "Rainfall (mm)": "ปริมาณน้ำฝน (มม.)",
+    "Latex Yield (kg)": "ผลผลิตน้ำยาง (กก.)",
+    
+    "7-Day Weather & Advisory": "พยากรณ์อากาศและคำแนะนำ 7 วัน",
+    "Monthly Analysis": "การวิเคราะห์รายเดือน",
+    "Optimal": "เหมาะสม",
+    "Caution": "ระวัง",
+    "High Risk": "ความเสี่ยงสูง",
 
     "Welcome": "ยินดีต้อนรับ",
     "Here’s all the latest updates for you.": "นี่คือข้อมูลอัปเดตล่าสุดสำหรับคุณ",
@@ -58,7 +82,8 @@
     "September": "กันยายน",
     "October": "ตุลาคม",
     "November": "พฤศจิกายน",
-    "December": "ธันวาคม"
-
-
+    "December": "ธันวาคม",
+    "Live Research Coordinates: Krabi, TH": "พิกัดงานวิจัยสด: กระบี่, ประเทศไทย",
+    "High Risk / No Tapping": "ความเสี่ยงสูง / งดกรีด",
+    "No Tapping": "งดกรีด"
 }

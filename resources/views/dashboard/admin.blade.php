@@ -40,9 +40,14 @@
                     <div>
                         <p class="text-xs font-bold tracking-widest uppercase text-emerald-100 opacity-70">{{ __('Tapping Advisory') }}</p>
                         <h2 class="text-2xl font-black">
-                            @if($dssScore >= 7) {{ __('Optimal for Tapping') }}
-                            @elseif($dssScore >= 4) {{ __('Proceed with Caution') }}
-                            @else {{ __('High Risk of Washout') }} @endif
+                           <h2 class="text-lg font-black tracking-tight">
+                                @if($dssScore < 4)
+                                    {{ __('High Risk / No Tapping') }}
+                                @elseif($dssScore < 7)
+                                    {{ __('Proceed with Caution') }}
+                                @else
+                                    {{ __('Optimal for Tapping') }}
+                                @endif
                         </h2>
                     </div>
                 </div>

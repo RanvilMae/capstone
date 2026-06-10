@@ -35,7 +35,14 @@ class DashboardController extends Controller
         $allTransactions = $query->orderBy('transaction_date', 'asc')->get();
 
         // 2. KPI Calculations
-        $totalWeight = $allTransactions->sum('dry_rubber_weight_kg');
+        // Inside DashboardController index method:
+        $totalWeight = $allTransactions->sum('volume_kg');
+
+        // If you want to show the "Dry Weight" on the dashboard:
+        $totalDryWeight = $allTransactions->sum(function ($t) {
+            return ($t->volume_kg * $t->dry_rubber_content) / 100;
+        });
+
         $totalIncome = $allTransactions->sum('total_amount'); 
         $totalFarmers = User::where('role', 'farmer')->count();
         $totalPlots = max(1, Plot::count());
@@ -180,7 +187,7 @@ class DashboardController extends Controller
             'totalWeight', 'totalIncome', 'totalFarmers', 'totalPlots', 'growthRate', 'qualityIndex',
             'chartLabels', 'productionData', 'rainfallData', 'monthlyDSS', 'dssScore',
             'day', 'date', 'temperature', 'condition', 'icon', 'outlook',
-            'topContributors', 'correlationScore', 'correlationStrength', 'userAdvice', 'yieldWarning'
+            'topContributors', 'correlationScore', 'correlationStrength', 'userAdvice', 'yieldWarning', 'totalDryWeight'
         ));
     }
 
