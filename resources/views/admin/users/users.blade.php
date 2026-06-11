@@ -54,21 +54,26 @@
                             <td class="px-6 py-3 font-medium text-gray-800">{{ $user->name }}</td>
                             <td class="px-6 py-3 text-gray-600">{{ $user->email }}</td>
                             <td class="px-6 py-3 text-gray-600">{{ __(ucfirst($user->role)) }}</td>
+                            
+                            {{-- Status Column --}}
                             <td class="px-6 py-3">
                                 @if($user->trashed())
                                     <span class="inline-flex items-center gap-1 px-2 py-1 text-white bg-red-600 rounded">
                                         <i class="fa-solid fa-xmark"></i> {{ __('Rejected') }}
                                     </span>
-                                @elseif($user->is_approved)
+                                {{-- UPDATE: Both boolean flags must evaluate to true for approved status --}}
+                                @elseif($user->is_approved && $user->approved)
                                     <span class="inline-flex items-center gap-1 px-2 py-1 text-white bg-green-700 rounded">
                                         <i class="fa-solid fa-check"></i> {{ __('Approved') }}
                                     </span>
                                 @else
                                     <span class="inline-flex items-center gap-1 px-2 py-1 text-white bg-yellow-600 rounded">
-                                        <i class="fa-solid fa-hourglass-half"></i> {{ __('Pending') }}
+                                        <i class="fa-solid fa-hourglass-half"></i> {{ __('Pending Approval') }}
                                     </span>
                                 @endif
                             </td>
+                            
+                            {{-- Actions Column --}}
                             <td class="px-6 py-3 flex justify-center gap-2 flex-wrap">
                                 @if(!$user->trashed())
                                     {{-- Edit --}}
@@ -76,6 +81,7 @@
                                        class="inline-flex items-center gap-1 px-3 py-1 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition duration-200">
                                         <i class="fa-solid fa-pen-to-square"></i> {{ __('Edit') }}
                                     </a>
+                                    
                                     {{-- Reject --}}
                                     <form action="{{ route('admin.users.destroy', $user) }}" method="POST" class="inline">
                                         @csrf
@@ -86,8 +92,10 @@
                                             <i class="fa-solid fa-xmark"></i> {{ __('Reject') }}
                                         </button>
                                     </form>
+                                    
                                     {{-- Approve --}}
-                                    @if(!$user->is_approved)
+                                    {{-- UPDATE: Show approve action button if either parameter is still unapproved --}}
+                                    @if(!($user->is_approved && $user->approved))
                                         <form action="{{ route('admin.users.approve', $user) }}" method="POST" class="inline">
                                             @csrf
                                             @method('PATCH')

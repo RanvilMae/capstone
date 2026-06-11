@@ -16,7 +16,10 @@ class AdminApprovalController extends Controller
     // Show pending users
     public function index()
     {
-        $pendingUsers = User::where('is_approved', false)->get();
+        $pendingUsers = User::where('is_approved', false)
+                            ->where('approved', false)
+                            ->get();
+
         return view('admin.pending-users', compact('pendingUsers'));
     }
 
@@ -25,6 +28,7 @@ class AdminApprovalController extends Controller
     {
         $user = User::findOrFail($id);
         $user->is_approved = true;
+        $user->approved = true;
         $user->save();
 
         return redirect()->back()->with('success', "$user->name has been approved.");

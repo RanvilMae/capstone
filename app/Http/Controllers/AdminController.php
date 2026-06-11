@@ -95,6 +95,7 @@ class AdminController extends Controller
     {
         // Show users who are pending (not approved and not rejected)
         $users = User::where('is_approved', false)
+            ->where('approved', false)
             ->where('is_rejected', false)
             ->get();
 
