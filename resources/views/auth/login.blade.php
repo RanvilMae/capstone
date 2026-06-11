@@ -30,8 +30,8 @@
             {{-- Background Image Overlay --}}
             <div class="absolute inset-0 z-0">
                 <img src="{{ asset('images/rubber.jpg') }}" 
-                    class="object-cover w-full h-full brightness-[0.4]" 
-                    alt="{{ __('Rubber Plantation') }}">
+                     class="object-cover w-full h-full brightness-[0.4]" 
+                     alt="{{ __('Rubber Plantation') }}">
                 <div class="absolute inset-0 bg-gradient-to-t from-green-900/90 via-transparent to-transparent"></div>
             </div>
 
@@ -41,8 +41,8 @@
                     {{-- Large Logo Container - Aligned to the start (left) --}}
                     <div class="p-4 rounded-3xl flex items-center justify-center w-96 h-96">
                         <img src="{{ asset('images/laterx-logo.png') }}" 
-                            class="w-full h-full object-contain object-left" 
-                            alt="LATER-X Logo">
+                             class="w-full h-full object-contain object-left" 
+                             alt="LATER-X Logo">
                     </div>
                     {{-- Brand Name - Negative margin used to tuck it under the logo --}}
                     <span class="text-6xl font-black tracking-tighter text-white drop-shadow-md -mt-10 ml-4">LATER-X</span>
@@ -103,21 +103,24 @@
                     <form method="POST" action="{{ route('login') }}" class="space-y-6">
                         @csrf
 
+                        {{-- Email Field Group --}}
                         <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{{ __('Email Address') }}</label>
+                            <label id="email-label" for="email" class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{{ __('Email Address') }}</label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
                                     <i class="fa-regular fa-envelope"></i>
                                 </span>
-                                <input type="email" name="email" value="{{ old('email') }}" required autofocus
+                                <input type="email" name="email" id="email" value="{{ old('email') }}" required autofocus
+                                       autocomplete="username" aria-labelledby="email-label"
                                        class="w-full pl-11 pr-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:bg-white focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none"
                                        placeholder="name@example.com">
                             </div>
                         </div>
 
+                        {{-- Password Field Group --}}
                         <div>
                             <div class="flex justify-between mb-2">
-                                <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">{{ __('Password') }}</label>
+                                <label id="password-label" for="password" class="text-xs font-bold text-gray-400 uppercase tracking-wider">{{ __('Password') }}</label>
                                 <a href="{{ route('password.request') }}" class="text-xs font-bold text-green-600 hover:text-green-700">
                                     {{ __('Forgot?') }}
                                 </a>
@@ -126,7 +129,8 @@
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
                                     <i class="fa-solid fa-lock"></i>
                                 </span>
-                                <input type="password" name="password" required
+                                <input type="password" name="password" id="password" required
+                                       autocomplete="current-password" aria-labelledby="password-label"
                                        class="w-full pl-11 pr-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:bg-white focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none"
                                        placeholder="••••••••">
                             </div>
