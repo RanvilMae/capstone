@@ -6,25 +6,25 @@ use Illuminate\Database\Eloquent\Model;
 
 class Plot extends Model
 {
-    protected $table = 'plots'; // just to be explicit
+    protected $table = 'plots';
 
     protected $fillable = [
         'code',
         'farmer_id',
+        'user_id', // 1. Add user_id here
         'plot_size_rai',
         'plot_location',
         'notes',
     ];
 
-
-    public function productionSummaries()
+    // 2. Automatically sync user_id with farmer_id when creating a plot
+    protected static function booted()
     {
-        return $this->hasMany(ProductionSummary::class);
-    }
-
-    public function latexTransactions()
-    {
-        return $this->hasMany(LatexTransaction::class, 'plot_id', 'id');
+        static::creating(function ($plot) {
+            if (!$plot->user_id && $plot->farmer_id) {
+                $plot->user_id = $plot->farmer_id;
+            }
+        });
     }
 
     public function farmer()
@@ -32,7 +32,12 @@ class Plot extends Model
         return $this->belongsTo(User::class, 'farmer_id');
     }
 
-    public function production_summaries()
+    public function latexTransactions()
+    {
+        return $this->hasMany(LatexTransaction::class, 'plot_id', 'id');
+    }
+
+    public function productionSummaries()
     {
         return $this->hasMany(ProductionSummary::class);
     }

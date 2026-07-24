@@ -45,7 +45,7 @@ class DashboardController extends Controller
         $currentAvg = $allTransactions->avg('dry_rubber_weight_kg') ?? 0;
         $growthRate = ($overallAvg > 0) ? round((($currentAvg - $overallAvg) / $overallAvg) * 100, 1) : 0;
 
-        // 3. REAL-TIME WEATHER INITIALIZATION
+        // 3. REAL-TIME WEATHER INITIALIZATION & 7-DAY OUTLOOK (Open-Meteo API)
         $now = now();
         $day = $now->translatedFormat('l');
         $date = $now->translatedFormat('d F Y');
@@ -55,57 +55,62 @@ class DashboardController extends Controller
         $outlook = collect();
         $dssScore = 10; 
 
-        $apiKey = env('OPENWEATHER_API_KEY');
+        try {
+            // Krabi, Thailand Coordinates: Lat 8.0863, Lon 98.9063
+            $response = Http::get("https://api.open-meteo.com/v1/forecast", [
+                'latitude' => 8.0863,
+                'longitude' => 98.9063,
+                'current' => 'temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m',
+                'daily' => 'temperature_2m_max,precipitation_sum,relative_humidity_2m_mean,wind_speed_10m_max',
+                'timezone' => 'Asia/Bangkok'
+            ]);
 
-        if ($apiKey) {
-            try {
-                $response = Http::get("https://api.openweathermap.org/data/2.5/forecast", [
-                    'q' => 'Krabi,TH',
-                    'appid' => $apiKey,
-                    'units' => 'metric'
-                ]);
+            if ($response->successful()) {
+                $weatherData = $response->json();
+                
+                // Current Weather Processing
+                $current = $weatherData['current'] ?? [];
+                $temperature = round($current['temperature_2m'] ?? 28);
+                $weatherCode = $current['weather_code'] ?? 0;
+                
+                $condition = $this->mapMeteoCodeToCondition($weatherCode);
+                $icon = $this->getWeatherIcon($condition);
 
-                if ($response->successful()) {
-                    $weatherData = $response->json();
-                    $current = $weatherData['list'][0];
-                    $temperature = round($current['main']['temp']);
-                    $condition = $current['weather'][0]['main'];
-                    $icon = $this->getWeatherIcon($condition);
+                // Current DSS Score
+                $res = $this->dss->getRecommendation(
+                    $current['precipitation'] ?? 0, 
+                    $temperature, 
+                    $current['relative_humidity_2m'] ?? 0, 
+                    $current['wind_speed_10m'] ?? 0
+                );
+                $dssScore = $res['score'];
 
-                    // Decision Support Score (Current)
-                    $res = $this->dss->getRecommendation(
-                        $current['rain']['3h'] ?? 0, 
-                        $temperature, 
-                        $current['main']['humidity'] ?? 0, 
-                        $current['wind']['speed'] ?? 0
-                    );
-                    $dssScore = $res['score'];
+                // 7-Day Daily Forecast Outlook
+                $daily = $weatherData['daily'] ?? [];
+                if (!empty($daily['time'])) {
+                    $outlook = collect($daily['time'])->map(function ($dateString, $index) use ($daily) {
+                        $temp = $daily['temperature_2m_max'][$index] ?? 28;
+                        $rain = $daily['precipitation_sum'][$index] ?? 0;
+                        $humidity = $daily['relative_humidity_2m_mean'][$index] ?? 0;
+                        $wind = $daily['wind_speed_10m_max'][$index] ?? 0;
 
-                    // 7-period outlook
-                    $outlook = collect($weatherData['list'])
-                        ->filter(fn($i) => str_contains($i['dt_txt'], '12:00:00'))
-                        ->take(7)
-                        ->map(function ($item) {
-                            $r = $this->dss->getRecommendation(
-                                $item['rain']['3h'] ?? 0, 
-                                $item['main']['temp'], 
-                                $item['main']['humidity'] ?? 0, 
-                                $item['wind']['speed'] ?? 0
-                            );
-                            
-                            return array_merge($r, [
-                                'day' => Carbon::parse($item['dt_txt'])->translatedFormat('D'),
-                                'temp' => round($item['main']['temp']),
-                                'rain' => $item['rain']['3h'] ?? 0,
-                                'humidity' => $item['main']['humidity'] ?? 0,
-                                'wind' => $item['wind']['speed'] ?? 0,
-                            ]);
-                        });
+                        // DSS Recommendation per day
+                        $r = $this->dss->getRecommendation($rain, $temp, $humidity, $wind);
+
+                        return array_merge($r, [
+                            'day' => Carbon::parse($dateString)->translatedFormat('D'),
+                            'temp' => round($temp),
+                            'rain' => $rain,
+                            'humidity' => $humidity,
+                            'wind' => $wind,
+                        ]);
+                    })->take(7);
                 }
-            } catch (\Exception $e) { 
-                \Log::error("Weather API Error: " . $e->getMessage()); 
             }
+        } catch (\Exception $e) { 
+            \Log::error("Open-Meteo Weather API Error: " . $e->getMessage()); 
         }
+
 
         // 4. CHART & CORRELATION LOGIC
         $correlationScore = 0; // Initialize to avoid ErrorException
@@ -197,5 +202,16 @@ class DashboardController extends Controller
             Excel::import(new LatexProductionImport, $request->file('excel_file'));
             return back()->with('success', 'Data Integrated Successfully.');
         } catch (\Exception $e) { return back()->with('error', 'Import failed: ' . $e->getMessage()); }
+    }
+
+    private function mapMeteoCodeToCondition($code) {
+        return match (true) {
+            $code === 0 => 'Clear',
+            in_array($code, [1, 2, 3]) => 'Clouds',
+            in_array($code, [51, 53, 55, 56, 57]) => 'Drizzle',
+            in_array($code, [61, 63, 65, 66, 67, 80, 81, 82]) => 'Rain',
+            in_array($code, [95, 96, 99]) => 'Thunderstorm',
+            default => 'Clear',
+        };
     }
 }
