@@ -11,13 +11,12 @@ class Plot extends Model
     protected $fillable = [
         'code',
         'farmer_id',
-        'user_id', // 1. Add user_id here
+        'user_id',
         'plot_size_rai',
         'plot_location',
         'notes',
     ];
 
-    // 2. Automatically sync user_id with farmer_id when creating a plot
     protected static function booted()
     {
         static::creating(function ($plot) {

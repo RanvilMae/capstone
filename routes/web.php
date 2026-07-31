@@ -42,7 +42,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::get('/plots/create', [PlotController::class, 'create'])->name('plots.create');
     Route::post('/plots', [PlotController::class, 'store'])->name('plots.store');
     Route::get('/plots/{plot}/edit', [PlotController::class, 'edit'])->name('plots.edit');
-    Route::patch('/plots/{plot}', [PlotController::class, 'update'])->name('plots.update');
+    Route::match(['put', 'patch'], '/plots/{plot}', [PlotController::class, 'update'])->name('plots.update'); // Supports PUT and PATCH
     Route::delete('/plots/{plot}', [PlotController::class, 'destroy'])->name('plots.destroy');
 
     // Farmers view - CHANGED NAME TO 'main.farmer.index' TO AVOID CLASH
@@ -52,6 +52,13 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::get('/farmers/{farmer}/edit', [FarmerController::class, 'edit'])->name('main.farmer.edit');
     Route::patch('/farmers/{farmer}', [FarmerController::class, 'update'])->name('main.farmer.update');
     Route::delete('/farmers/{farmer}', [FarmerController::class, 'destroy'])->name('main.farmer.destroy');
+
+    // Reports Index View
+    Route::get('/reports', [DashboardController::class, 'reportsIndex'])->name('reports.index');
+    
+    // Excel Download Action
+    Route::get('/reports/fresh-rubber/download', [DashboardController::class, 'exportFreshRubberReport'])
+        ->name('reports.fresh-rubber.export');
 });
 
 // Admin-only routes
@@ -99,7 +106,20 @@ Route::middleware(['auth', 'role:admin', 'approved'])->prefix('admin')->name('ad
 // Staff-only routes
 Route::middleware(['auth', 'role:staff', 'approved'])->prefix('staff')->name('staff.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'staffDashboard'])->name('dashboard');
-    // If you add farmer routes here later, they will be 'staff.farmer.index' automatically
+});
+
+Route::middleware(['auth'])->group(function () {
+    // Show the import form view
+    Route::get('/latex/import', [LatexTransactionController::class, 'showImportForm'])
+        ->name('latex.import.form');
+
+    // Handle the CSV/Excel file upload form submission
+    Route::post('/latex/import', [LatexTransactionController::class, 'import'])
+        ->name('latex.import');
+
+    // Transactions list view
+    Route::get('/latex-transactions', [LatexTransactionController::class, 'index'])
+        ->name('latex.index');
 });
 
 // Include auth routes

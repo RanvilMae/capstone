@@ -8,12 +8,31 @@ use Illuminate\Http\Request;
 class FarmerController extends Controller
 {
     /**
-     * Display a listing of farmers (for both Admin and Staff).
+     * Display a listing of farmers with search filtering and pagination.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $farmers = Farmer::all();
-        return view('farmer.index', compact('farmers')); // shared view
+        $search = $request->input('search');
+
+        $farmers = Farmer::query()
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%")
+                      ->orWhere('farm_location', 'like', "%{$search}%");
+
+                    // Optional: include code search if present on model
+                    if (\Schema::hasColumn('farmers', 'code')) {
+                        $q->orWhere('code', 'like', "%{$search}%");
+                    }
+                });
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('farmer.index', compact('farmers'));
     }
 
     /**
@@ -21,7 +40,7 @@ class FarmerController extends Controller
      */
     public function create()
     {
-        return view('farmer.create'); // shared view
+        return view('farmer.create');
     }
 
     /**
@@ -29,19 +48,21 @@ class FarmerController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name'          => 'required|string|max:255',
-            'email'         => 'required|email|unique:farmers,email',
+            'email'         => 'required|email|max:255|unique:farmers,email',
             'phone'         => 'required|string|max:20',
             'address'       => 'nullable|string|max:255',
             'farm_location' => 'nullable|string|max:255',
-            'farm_size'     => 'nullable|numeric',
+            'farm_size'     => 'nullable|numeric|min:0',
             'notes'         => 'nullable|string',
         ]);
 
-        Farmer::create($request->all());
+        Farmer::create($validated);
 
-        return redirect()->route('main.farmer.index')->with('success', 'Farmer added successfully.');
+        return redirect()
+            ->route('main.farmer.index')
+            ->with('success', 'Farmer added successfully.');
     }
 
     /**
@@ -49,7 +70,7 @@ class FarmerController extends Controller
      */
     public function edit(Farmer $farmer)
     {
-        return view('farmer.edit', compact('farmer')); // shared view
+        return view('farmer.edit', compact('farmer'));
     }
 
     /**
@@ -57,19 +78,21 @@ class FarmerController extends Controller
      */
     public function update(Request $request, Farmer $farmer)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name'          => 'required|string|max:255',
-            'email'         => 'required|email|unique:farmers,email,' . $farmer->id,
+            'email'         => 'required|email|max:255|unique:farmers,email,' . $farmer->id,
             'phone'         => 'required|string|max:20',
             'address'       => 'nullable|string|max:255',
             'farm_location' => 'nullable|string|max:255',
-            'farm_size'     => 'nullable|numeric',
+            'farm_size'     => 'nullable|numeric|min:0',
             'notes'         => 'nullable|string',
         ]);
 
-        $farmer->update($request->all());
+        $farmer->update($validated);
 
-        return redirect()->route('main.farmer.index')->with('success', 'Farmer updated successfully.');
+        return redirect()
+            ->route('main.farmer.index')
+            ->with('success', 'Farmer updated successfully.');
     }
 
     /**
@@ -79,6 +102,8 @@ class FarmerController extends Controller
     {
         $farmer->delete();
 
-        return redirect()->route('main.farmer.index')->with('success', 'Farmer deleted successfully.');
+        return redirect()
+            ->route('main.farmer.index')
+            ->with('success', 'Farmer deleted successfully.');
     }
 }

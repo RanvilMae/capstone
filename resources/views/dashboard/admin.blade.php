@@ -69,30 +69,39 @@
         </div>
     </div>
 
-    {{-- KPI Cards --}}
+    {{-- KPI Cards (Updated with Icon Header + Title) --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         @php
             $kpis = [
-                ['label' => __('Farmers'), 'icon' => 'fa-users', 'value' => $totalFarmers, 'trend' => null],
-                ['label' => __('Latex (kg)'), 'icon' => 'fa-droplet', 'value' => number_format($totalWeight, 1), 'trend' => $growthRate],
-                ['label' => __('Avg DRC'), 'icon' => 'fa-vial', 'value' => $qualityIndex . '%', 'trend' => null],
-                ['label' => __('Total Plots'), 'icon' => 'fa-map-location-dot', 'value' => $totalPlots, 'trend' => null],
+                ['label' => __('Registered Farmers'), 'icon' => 'fa-users', 'value' => $totalFarmers, 'trend' => null],
+                ['label' => __('Total Latex Yield'), 'icon' => 'fa-droplet', 'value' => number_format($totalWeight, 1) . ' kg', 'trend' => $growthRate],
+                ['label' => __('Average DRC'), 'icon' => 'fa-vial', 'value' => $qualityIndex . '%', 'trend' => null],
+                ['label' => __('Total Rubber Plots'), 'icon' => 'fa-map-location-dot', 'value' => $totalPlots, 'trend' => null],
             ];
         @endphp
         @foreach($kpis as $kpi)
-        <div class="p-6 bg-white shadow-lg rounded-3xl border border-gray-50 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group">
-            <div class="flex justify-between items-start">
-                <div class="p-3 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                    <i class="fa-solid {{ $kpi['icon'] }} text-xl"></i>
+        <div class="p-6 bg-white shadow-lg rounded-3xl border border-gray-50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group">
+            <div class="flex items-center justify-between">
+                {{-- Icon and Title Row --}}
+                <div class="flex items-center gap-3">
+                    <div class="p-3 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors shadow-sm">
+                        <i class="fa-solid {{ $kpi['icon'] }} text-lg"></i>
+                    </div>
+                    <span class="text-xs font-black uppercase tracking-wider text-gray-500">{{ $kpi['label'] }}</span>
                 </div>
+
+                {{-- Trend Indicator --}}
                 @if($kpi['trend'] !== null)
-                    <span class="px-2 py-1 rounded-lg text-[10px] font-black {{ $kpi['trend'] >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600' }}">
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black {{ $kpi['trend'] >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }}">
                         {{ $kpi['trend'] >= 0 ? '↑' : '↓' }} {{ abs($kpi['trend']) }}%
                     </span>
                 @endif
             </div>
-            <p class="mt-6 text-gray-400 text-[10px] font-black uppercase tracking-widest">{{ $kpi['label'] }}</p>
-            <p class="text-3xl font-black text-gray-800 mt-1">{{ $kpi['value'] }}</p>
+
+            {{-- Main Value Display --}}
+            <div class="mt-4 pt-2">
+                <p class="text-3xl font-black text-gray-800 tracking-tight">{{ $kpi['value'] }}</p>
+            </div>
         </div>
         @endforeach
     </div>

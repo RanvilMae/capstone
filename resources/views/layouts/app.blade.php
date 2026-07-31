@@ -17,11 +17,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" crossorigin="anonymous"/>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
 
 <body class="font-sans antialiased bg-gray-100">
 
-<div x-data="{ sidebarOpen: false }" class="flex">
+<!-- Global Alpine State (Sidebar + Import Modal) -->
+<div x-data="{ sidebarOpen: false, openImportModal: false }" class="flex">
 
     {{-- Desktop Sidebar --}}
     <aside class="hidden md:flex flex-col justify-between w-64 h-screen bg-green-50 text-gray-800 shadow fixed">
@@ -48,13 +52,19 @@
                 </a>
 
                 <a href="{{ route('plots.index') }}"
-                   class="block px-6 py-2 rounded {{ request()->routeIs('admin.plots.*') || request()->routeIs('staff.plots.*') ? 'bg-green-200 font-semibold text-green-900' : 'hover:bg-green-100' }}">
+                   class="block px-6 py-2 rounded {{ request()->routeIs('admin.plots.*') || request()->routeIs('staff.plots.*') || request()->routeIs('plots.*') ? 'bg-green-200 font-semibold text-green-900' : 'hover:bg-green-100' }}">
                     {{ __('Plot Management') }}
                 </a>
 
                 <a href="{{ route('main.farmer.index') }}"
-                   class="block px-6 py-2 rounded {{ request()->routeIs('admin.farmer.*') || request()->routeIs('staff.farmer.index') ? 'bg-green-200 font-semibold text-green-900' : 'hover:bg-green-100' }}">
+                   class="block px-6 py-2 rounded {{ request()->routeIs('admin.farmer.*') || request()->routeIs('staff.farmer.index') || request()->routeIs('main.farmer.*') ? 'bg-green-200 font-semibold text-green-900' : 'hover:bg-green-100' }}">
                     {{ __('Farmers') }}
+                </a>
+
+                {{-- Reports Index Route --}}
+                <a href="{{ route('reports.index') }}"
+                   class="block px-6 py-2 rounded {{ request()->routeIs('reports.*') ? 'bg-green-200 font-semibold text-green-900' : 'hover:bg-green-100' }}">
+                    {{ __('Sales Report') }}
                 </a>
 
                 @if(auth()->user()->hasRole('admin'))
@@ -75,7 +85,7 @@
                 <i class="fas fa-chevron-down ml-auto text-green-700"></i>
             </button>
 
-            <div x-show="open" @click.away="open = false"
+            <div x-show="open" @click.away="open = false" x-cloak
                  class="absolute bottom-full left-0 mb-2 w-full bg-white border rounded shadow-lg z-50 p-2">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -88,7 +98,7 @@
     </aside>
 
     {{-- Mobile Sidebar --}}
-    <aside x-show="sidebarOpen" @click.away="sidebarOpen = false"
+    <aside x-show="sidebarOpen" @click.away="sidebarOpen = false" x-cloak
            class="fixed inset-y-0 left-0 w-64 bg-green-50 text-gray-800 shadow z-50 flex flex-col justify-between md:hidden">
         <div>
             <div class="p-6 flex justify-between items-center">
@@ -98,12 +108,13 @@
                 </button>
             </div>
 
-            <nav class="mt-6 space-y-1">
+            <nav class="space-y-1">
                 <a href="{{ route('dashboard.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Dashboard') }}</a>
                 <a href="{{ route('transactions.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Latex Monitoring') }}</a>
                 <a href="{{ route('transactions.create') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Create Transaction') }}</a>
                 <a href="{{ route('plots.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Plot Management') }}</a>
                 <a href="{{ route('main.farmer.index') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('Farmers') }}</a>
+                <a href="{{ route('reports.index') }}" class="block px-6 py-2 rounded {{ request()->routeIs('reports.*') ? 'bg-green-200 font-semibold text-green-900' : 'hover:bg-green-100' }}">{{ __('Sales Report') }}</a>
                 @if(auth()->user()->hasRole('admin'))
                     <a href="{{ route('admin.users') }}" class="block px-6 py-2 rounded hover:bg-green-100">{{ __('User Management') }}</a>
                 @endif

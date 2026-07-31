@@ -10,7 +10,9 @@ use App\Services\DSSService;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 use App\Imports\LatexProductionImport;
+use App\Exports\FreshRubberSalesReportExport;
 
 class DashboardController extends Controller
 {
@@ -27,15 +29,19 @@ class DashboardController extends Controller
 
     private function generateDashboardData(Request $request, $viewName)
     {
-        // 1. Data Fetching
+        // 1. Data Fetching & Filtering
         $query = LatexTransaction::with('plot');
         if ($request->filled('plot_id')) {
             $query->where('plot_id', $request->plot_id);
         }
         $allTransactions = $query->orderBy('transaction_date', 'asc')->get();
 
-        // 2. KPI Calculations
+        // Paginated transactions table for detailed view
+        $recentTransactions = (clone $query)->latest('transaction_date')->paginate(15);
+
+        // 2. Core KPI & Metric Calculations
         $totalWeight = $allTransactions->sum('dry_rubber_weight_kg');
+        $totalVolume = $allTransactions->sum('volume_kg');
         $totalIncome = $allTransactions->sum('total_amount'); 
         $totalFarmers = User::where('role', 'farmer')->count();
         $totalPlots = max(1, Plot::count());
@@ -45,7 +51,7 @@ class DashboardController extends Controller
         $currentAvg = $allTransactions->avg('dry_rubber_weight_kg') ?? 0;
         $growthRate = ($overallAvg > 0) ? round((($currentAvg - $overallAvg) / $overallAvg) * 100, 1) : 0;
 
-        // 3. REAL-TIME WEATHER INITIALIZATION & 7-DAY OUTLOOK (Open-Meteo API)
+        // 3. Weather Integration & 7-Day Forecast Outlook (Open-Meteo API)
         $now = now();
         $day = $now->translatedFormat('l');
         $date = $now->translatedFormat('d F Y');
@@ -111,11 +117,13 @@ class DashboardController extends Controller
             \Log::error("Open-Meteo Weather API Error: " . $e->getMessage()); 
         }
 
-
-        // 4. CHART & CORRELATION LOGIC
-        $correlationScore = 0; // Initialize to avoid ErrorException
+        // 4. Chart & Statistical Correlation Logic
+        $correlationScore = 0;
         $yieldWarning = null;
-        $chartLabels = []; $productionData = []; $rainfallData = []; $monthlyDSS = [];
+        $chartLabels = []; 
+        $productionData = []; 
+        $rainfallData = []; 
+        $monthlyDSS = [];
         $krabiRainfallBaseline = ['01'=>35, '02'=>40, '03'=>85, '04'=>160, '05'=>260, '06'=>230, '07'=>280, '08'=>320, '09'=>360, '10'=>310, '11'=>190, '12'=>70];
 
         $monthlyGroups = $allTransactions->groupBy(fn($item) => Carbon::parse($item->transaction_date)->format('Y-m'));
@@ -154,7 +162,7 @@ class DashboardController extends Controller
             $correlationScore = ($denom != 0) ? ($num / $denom) : 0;
         }
 
-        // 5. ANOMALY DETECTION & ADVICE
+        // 5. Anomaly Detection & Advice
         if ($correlationScore < -0.6 && $currentAvg < $overallAvg) {
             $yieldWarning = [
                 'title' => __('Yield Anomaly Detected'),
@@ -175,6 +183,8 @@ class DashboardController extends Controller
         };
 
         $monthlyDSS = array_slice(array_reverse($monthlyDSS), 0, 12);
+        
+        // Top farmer contributors
         $topContributors = User::where('role', 'farmer')
             ->withSum('latexTransactions as total_latex', 'dry_rubber_weight_kg')
             ->orderByDesc('total_latex')
@@ -182,8 +192,8 @@ class DashboardController extends Controller
             ->get();
 
         return view($viewName, compact(
-            'totalWeight', 'totalIncome', 'totalFarmers', 'totalPlots', 'growthRate', 'qualityIndex',
-            'chartLabels', 'productionData', 'rainfallData', 'monthlyDSS', 'dssScore',
+            'totalWeight', 'totalVolume', 'totalIncome', 'totalFarmers', 'totalPlots', 'growthRate', 'qualityIndex',
+            'recentTransactions', 'chartLabels', 'productionData', 'rainfallData', 'monthlyDSS', 'dssScore',
             'day', 'date', 'temperature', 'condition', 'icon', 'outlook',
             'topContributors', 'correlationScore', 'correlationStrength', 'userAdvice', 'yieldWarning'
         ));
@@ -201,7 +211,9 @@ class DashboardController extends Controller
         try {
             Excel::import(new LatexProductionImport, $request->file('excel_file'));
             return back()->with('success', 'Data Integrated Successfully.');
-        } catch (\Exception $e) { return back()->with('error', 'Import failed: ' . $e->getMessage()); }
+        } catch (\Exception $e) { 
+            return back()->with('error', 'Import failed: ' . $e->getMessage()); 
+        }
     }
 
     private function mapMeteoCodeToCondition($code) {
@@ -213,5 +225,61 @@ class DashboardController extends Controller
             in_array($code, [95, 96, 99]) => 'Thunderstorm',
             default => 'Clear',
         };
+    }
+
+    public function reportsIndex(Request $request)
+    {
+        $type = $request->input('type', 'daily');
+        $date = $request->input('date', date('Y-m-d'));
+        $month = $request->input('month', date('m'));
+        $year = $request->input('year', date('Y'));
+        $quarter = $request->input('quarter', 1);
+        $semester = $request->input('semester', 1);
+
+        $query = LatexTransaction::with(['plot', 'plot.farmer']);
+
+        switch ($type) {
+            case 'monthly':
+                $query->whereYear('transaction_date', $year)->whereMonth('transaction_date', $month);
+                $periodLabel = Carbon::createFromDate($year, $month, 1)->format('F Y');
+                break;
+            case 'quarterly':
+                $startMonth = ($quarter - 1) * 3 + 1;
+                $query->whereYear('transaction_date', $year)->whereBetween(\DB::raw('MONTH(transaction_date)'), [$startMonth, $startMonth + 2]);
+                $periodLabel = "Q{$quarter} {$year}";
+                break;
+            case 'semestral':
+                $startMonth = $semester == 1 ? 1 : 7;
+                $query->whereYear('transaction_date', $year)->whereBetween(\DB::raw('MONTH(transaction_date)'), [$startMonth, $startMonth + 5]);
+                $periodLabel = "Semester {$semester}, {$year}";
+                break;
+            case 'yearly':
+                $query->whereYear('transaction_date', $year);
+                $periodLabel = "Year {$year}";
+                break;
+            case 'daily':
+            default:
+                $query->whereDate('transaction_date', $date);
+                $periodLabel = Carbon::parse($date)->format('l, F j, Y');
+                break;
+        }
+
+        $transactions = $query->get();
+        $avgPrice = $transactions->avg('price_per_kg') ?? 39.50;
+
+        return view('reports.index', compact(
+            'transactions', 'type', 'date', 'month', 'year', 'quarter', 'semester', 'periodLabel', 'avgPrice'
+        ));
+    }
+
+    /**
+     * Download Excel File
+     */
+    public function exportFreshRubberReport(Request $request)
+    {
+        $filters = $request->only(['type', 'date', 'month', 'year', 'quarter', 'semester']);
+        $filename = 'Fresh_Rubber_Sales_Report_' . ($filters['type'] ?? 'daily') . '_' . date('Ymd_His') . '.xlsx';
+
+        return Excel::download(new FreshRubberSalesReportExport($filters), $filename);
     }
 }

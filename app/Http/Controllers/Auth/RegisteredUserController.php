@@ -41,7 +41,7 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        // Do NOT log in automatically because admin approval is required
-        return redirect()->route('login')->with('status', 'Registration successful! Waiting for admin approval.');
+        // Stay on the registration page and pass the success status message
+        return redirect()->back()->with('status', 'Registration submitted successfully! Your account is pending admin approval.');
     }
 }

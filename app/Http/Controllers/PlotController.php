@@ -9,76 +9,91 @@ use Illuminate\Validation\Rule;
 
 class PlotController extends Controller
 {
-    public function index()
+    /**
+     * Display a listing of plots with optional search filtering.
+     */
+    public function index(Request $request)
     {
-        // Fetch plots with farmers, paginate for all users
-        $plots = Plot::with('farmer')->paginate(10);
-        return view('plots.index', compact('plots')); // Updated view path
+        $query = Plot::with('farmer');
+
+        // Apply search filter across code, location, notes, and farmer name
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                  ->orWhere('plot_location', 'like', "%{$search}%")
+                  ->orWhere('notes', 'like', "%{$search}%")
+                  ->orWhereHas('farmer', function ($farmerQuery) use ($search) {
+                      $farmerQuery->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Paginate and retain the search query parameter in pagination links
+        $plots = $query->paginate(10)->withQueryString();
+
+        return view('plots.index', compact('plots'));
     }
 
+    /**
+     * Show the form for creating a new plot.
+     */
     public function create()
     {
         $farmers = Farmer::all();
-        return view('plots.create', compact('farmers')); // Updated view path
+        return view('plots.create', compact('farmers'));
     }
 
+    /**
+     * Store a newly created plot in storage.
+     */
     public function store(Request $request)
     {
         $request->validate([
-            'farmer_id' => 'required|exists:farmers,id',
-            'plot_size_rai' => 'required|numeric',
-            'plot_location' => [
-                'required',
-                'string',
-                'max:255',
-                // Ensure uniqueness per farmer
-                Rule::unique('plots')->where(fn ($query) => $query->where('farmer_id', $request->farmer_id)),
-            ],
-            'notes' => 'nullable|string',
-        ], [
-            'plot_location.unique' => 'This farmer already has a plot at this location.',
+            'farmer_id'     => 'required|exists:farmers,id',
+            'plot_size_rai' => 'required|numeric|min:0.01',
+            'plot_location' => 'required|string|max:255', // Unique restriction removed
+            'notes'         => 'nullable|string',
         ]);
 
         Plot::create($request->all());
 
-        // Redirect back to create page with success message
-        return redirect()->route('plots.create')->with('success', 'Plot created successfully.');
-    }
-
-    public function edit(Plot $plot)
-    {
-        $farmers = Farmer::all();
-        return view('plots.edit', compact('plot', 'farmers')); // Updated view path
+        return redirect()->route('plots.index')->with('success', 'Plot created successfully.');
     }
 
     public function update(Request $request, Plot $plot)
     {
         $request->validate([
-            'farmer_id' => 'required|exists:farmers,id',
-            'plot_size_rai' => 'required|numeric',
-            'plot_location' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('plots')->where(fn ($query) => $query->where('farmer_id', $request->farmer_id))
-                                        ->ignore($plot->id),
-            ],
-            'notes' => 'nullable|string',
-        ], [
-            'plot_location.unique' => 'This farmer already has a plot at this location.',
+            'farmer_id'     => 'required|exists:farmers,id',
+            'plot_size_rai' => 'required|numeric|min:0.01',
+            'plot_location' => 'required|string|max:255', // Unique restriction removed
+            'notes'         => 'nullable|string',
         ]);
 
         $plot->update($request->all());
 
-        // Redirect back to edit page with success message
-        return redirect()->route('plots.edit', $plot->id)->with('success', 'Plot updated successfully.');
+        return redirect()->route('plots.index')->with('success', 'Plot updated successfully.');
     }
 
+    /**
+     * Show the form for editing the specified plot.
+     */
+    public function edit(Plot $plot)
+    {
+        $farmers = Farmer::all();
+        return view('plots.edit', compact('plot', 'farmers'));
+    }
+
+
+
+    /**
+     * Remove the specified plot from storage.
+     */
     public function destroy(Plot $plot)
     {
         $plot->delete();
 
-        // Redirect back to index with success message
         return redirect()->route('plots.index')->with('success', 'Plot deleted successfully.');
     }
 }

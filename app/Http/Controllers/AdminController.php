@@ -21,7 +21,20 @@ class AdminController extends Controller
 
     public function manageUsers(Request $request)
     {
-        $users = User::all();
+        $query = User::withTrashed();
+
+        // Handle Search Query
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('role', 'like', "%{$search}%");
+            });
+        }
+
+        // Paginate results (10 per page) and keep query parameters in pagination links
+        $users = $query->latest()->paginate(10)->withQueryString();
 
         if ($request->expectsJson()) {
             return response()->json($users, Response::HTTP_OK);
@@ -69,7 +82,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'role' => 'required|in:admin,staff,director,farmer',
-            'password' => 'nullable|string|min:8|confirmed', // Add this
+            'password' => 'nullable|string|min:8|confirmed',
         ]);
 
         // Only update password if the admin typed something in
@@ -84,8 +97,6 @@ class AdminController extends Controller
         return redirect()->route('admin.users')
             ->with('success', "User {$user->name} updated successfully.");
     }
-
-
 
     // ==============================
     // PENDING USERS
@@ -136,8 +147,9 @@ class AdminController extends Controller
     }
 
     // ==============================
-// RESTORE USER (optional)
-// ==============================
+    // RESTORE USER
+    // ==============================
+
     public function restoreUser($id)
     {
         $user = User::withTrashed()->findOrFail($id);
@@ -145,6 +157,7 @@ class AdminController extends Controller
 
         return redirect()->back()->with('success', "$user->name has been restored.");
     }
+
     // ==============================
     // FARMER MANAGEMENT
     // ==============================
