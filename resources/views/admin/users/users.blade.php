@@ -140,7 +140,7 @@
                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
                                         <i class="fa-solid fa-xmark mr-1"></i> {{ __('Rejected') }}
                                     </span>
-                                @elseif($user->is_approved && $user->approved)
+                                @elseif($user->is_approved)
                                     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
                                         <i class="fa-solid fa-check mr-1 text-emerald-500"></i> {{ __('Approved') }}
                                     </span>
@@ -156,7 +156,7 @@
                                 <div class="flex items-center justify-end gap-1">
                                     @if(!$user->trashed())
                                         {{-- Approve --}}
-                                        @if(!($user->is_approved && $user->approved))
+                                        @if(!$user->is_approved)
                                             <form action="{{ route('admin.users.approve', $user) }}" method="POST" class="inline">
                                                 @csrf
                                                 @method('PATCH')

@@ -56,7 +56,7 @@
             <div class="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl shadow-sm">
                 <ul class="list-disc pl-5 text-xs font-bold space-y-1">
                     @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
+                        <li>{{ __($error) }}</li>
                     @endforeach
                 </ul>
             </div>
@@ -69,7 +69,7 @@
                     <option value="">{{ __('All Plots') }}</option>
                     @foreach($plots as $plot)
                         <option value="{{ $plot->id }}" {{ request('plot_id') == $plot->id ? 'selected' : '' }}>
-                            [{{ $plot->code ?? 'NO-CODE' }}] {{ $plot->plot_location }} - {{ $plot->farmer->name ?? 'N/A' }}
+                            [{{ $plot->code ?? __('NO-CODE') }}] {{ $plot->plot_location }} - {{ $plot->farmer->name ?? __('N/A') }}
                         </option>
                     @endforeach
                 </select>
@@ -128,14 +128,14 @@
                             </td>
                             <td class="px-4 py-3.5 whitespace-nowrap">
                                 <div class="font-bold text-gray-800">
-                                    {{ $t->plot->plot_location ?? $t->location ?? 'N/A' }}
+                                    {{ $t->plot->plot_location ?? $t->location ?? __('N/A') }}
                                 </div>
                                 <div class="inline-flex items-center px-2 py-0.5 mt-1 rounded text-[10px] font-mono font-black bg-emerald-50 text-emerald-700 border border-emerald-200/50">
-                                    #{{ $t->plot->code ?? $t->plot_code ?? $t->code ?? 'N/A' }}
+                                    #{{ $t->plot->code ?? $t->plot_code ?? $t->code ?? __('N/A') }}
                                 </div>
                             </td>
                             <td class="px-4 py-3.5 whitespace-nowrap font-semibold text-gray-700">
-                                {{ $t->plot->farmer->name ?? $t->farmer_name ?? 'N/A' }}
+                                {{ $t->plot->farmer->name ?? $t->farmer_name ?? __('N/A') }}
                             </td>
                             <td class="px-4 py-3.5 text-right whitespace-nowrap font-bold text-gray-800">
                                 {{ number_format($t->volume_kg ?? 0, 2) }}
@@ -175,12 +175,12 @@
                                 @endphp
 
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border {{ $color }}">
-                                    {{ $label }}
+                                    {{ __($label) }}
                                 </span>
                             </td>
 
                             <td class="px-4 py-3.5 whitespace-nowrap text-gray-500 font-medium">
-                                {{ $t->user->name ?? $t->entered_by ?? 'System' }}
+                                {{ $t->user->name ?? $t->entered_by ?? __('System') }}
                             </td>
                         </tr>
                     @empty
@@ -227,14 +227,14 @@
                         @forelse($totals as $summary)
                             <tr class="hover:bg-emerald-50/30 transition-colors duration-150">
                                 <td class="px-6 py-3.5">
-                                    <div class="font-bold text-gray-800">{{ $summary->plot_location ?? 'N/A' }}</div>
+                                    <div class="font-bold text-gray-800">{{ $summary->plot_location ?? __('N/A') }}</div>
                                     @if(isset($summary->plot_code) || isset($summary->code))
                                         <div class="inline-flex items-center px-2 py-0.5 mt-0.5 rounded text-[10px] font-mono font-black bg-emerald-50 text-emerald-700 border border-emerald-200/50">
                                             #{{ $summary->plot_code ?? $summary->code }}
                                         </div>
                                     @endif
                                 </td>
-                                <td class="px-6 py-3.5 text-gray-600 font-semibold">{{ $summary->farmer_name ?? 'N/A' }}</td>
+                                <td class="px-6 py-3.5 text-gray-600 font-semibold">{{ $summary->farmer_name ?? __('N/A') }}</td>
                                 <td class="px-6 py-3.5 text-right font-black text-emerald-600 text-sm">
                                     {{ number_format($summary->total_dry_rubber ?? 0, 2) }}
                                 </td>

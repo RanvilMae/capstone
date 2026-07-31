@@ -27,6 +27,17 @@
     </div>
     @endif
 
+    {{-- Error Alert --}}
+    @if ($errors->any())
+    <div class="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl shadow-sm">
+        <ul class="list-disc pl-5 text-xs font-bold space-y-1">
+            @foreach ($errors->all() as $error)
+                <li>{{ __($error) }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     <div class="bg-white shadow-xl rounded-3xl p-6 md:p-8 border border-gray-100">
         {{-- Title Section --}}
         <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
@@ -55,12 +66,12 @@
                     <div class="relative">
                         <input type="text" name="location" required
                             class="w-full p-3.5 pl-11 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition-all font-medium text-gray-800 text-sm"
-                            placeholder="{{ __('Enter collection location') }}">
+                            placeholder="{{ __('Enter collection location') }}" value="{{ old('location') }}">
                         <i class="fa-solid fa-location-dot absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     </div>
                 </div>
 
-                {{-- Plot Dropdown (Includes Plot Code) --}}
+                {{-- Plot Dropdown --}}
                 <div>
                     <label class="block mb-2 text-xs font-black uppercase tracking-wider text-gray-500">
                         {{ __('Plot & Farmer') }} <span class="text-rose-500">*</span>
@@ -68,10 +79,10 @@
                     <div class="relative">
                         <select name="plot_id" required
                             class="w-full p-3.5 pl-11 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition-all font-medium text-gray-800 text-sm appearance-none">
-                            <option value="" disabled selected>{{ __('Select Rubber Plot') }}</option>
+                            <option value="" disabled {{ old('plot_id') ? '' : 'selected' }}>{{ __('Select Rubber Plot') }}</option>
                             @foreach($plots as $plot)
-                                <option value="{{ $plot->id }}">
-                                    [{{ $plot->code ?? 'NO-CODE' }}] {{ $plot->plot_location }} — {{ __('Farmer') }}: {{ $plot->farmer->name ?? __('Unknown') }}
+                                <option value="{{ $plot->id }}" {{ old('plot_id') == $plot->id ? 'selected' : '' }}>
+                                    [{{ $plot->code ?? __('NO-CODE') }}] {{ $plot->plot_location }} — {{ __('Farmer') }}: {{ $plot->farmer->name ?? __('Unknown') }}
                                 </option>
                             @endforeach
                         </select>
@@ -90,7 +101,7 @@
                     <div class="relative">
                         <input type="date" name="transaction_date" required
                             class="w-full p-3.5 pl-11 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition-all font-medium text-gray-800 text-sm"
-                            value="{{ date('Y-m-d') }}">
+                            value="{{ old('transaction_date', date('Y-m-d')) }}">
                         <i class="fa-solid fa-calendar-day absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
                     </div>
                 </div>
@@ -103,7 +114,7 @@
                     <div class="relative">
                         <input id="freshWeight" type="number" step="0.01" name="volume_kg" required
                             class="w-full p-3.5 pl-11 bg-emerald-50/50 border border-emerald-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition-all font-black text-gray-800 text-sm calc"
-                            placeholder="0.00">
+                            placeholder="0.00" value="{{ old('volume_kg') }}">
                         <i class="fa-solid fa-weight-hanging absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600"></i>
                     </div>
                 </div>
@@ -125,7 +136,7 @@
                             <label class="block mb-1 text-[11px] font-bold uppercase text-gray-500">{{ __('DRC (%)') }} <span class="text-rose-500">*</span></label>
                             <input name="drc_sample_{{ $i }}" type="number" step="0.01" required
                                 class="w-full p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm font-bold text-gray-800 calc drc"
-                                placeholder="0.00">
+                                placeholder="0.00" value="{{ old('drc_sample_' . $i) }}">
                         </div>
                         <div>
                             <label class="block mb-1 text-[11px] font-bold uppercase text-gray-400">{{ __('Dry Weight (kg)') }}</label>
@@ -144,14 +155,14 @@
                     <label class="block mb-1 text-xs font-black uppercase tracking-wider text-emerald-100">{{ __('Average DRC (%)') }}</label>
                     <input id="avgDRC" name="dry_rubber_content"
                         class="w-full bg-transparent border-0 text-3xl font-black text-white focus:outline-none placeholder-white/50"
-                        placeholder="0.00%" readonly required>
+                        placeholder="0.00%" readonly required value="{{ old('dry_rubber_content') }}">
                 </div>
 
                 <div class="p-5 bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl text-white shadow-lg">
                     <label class="block mb-1 text-xs font-black uppercase tracking-wider text-emerald-100">{{ __('Calculated Dry Rubber Weight (kg)') }}</label>
                     <input id="dryWeight" name="dry_rubber_weight_kg"
                         class="w-full bg-transparent border-0 text-3xl font-black text-white focus:outline-none placeholder-white/50"
-                        placeholder="0.00 kg" readonly>
+                        placeholder="0.00 kg" readonly value="{{ old('dry_rubber_weight_kg') }}">
                 </div>
             </div>
 
@@ -163,7 +174,7 @@
                 <div class="relative">
                     <input type="number" step="0.01" name="price_per_kg" required
                         class="w-full p-3.5 pl-11 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition-all font-bold text-gray-800 text-sm"
-                        placeholder="0.00">
+                        placeholder="0.00" value="{{ old('price_per_kg') }}">
                     <i class="fa-solid fa-baht-sign absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
                 </div>
             </div>
@@ -178,8 +189,11 @@
 </div>
 
 <script>
-document.querySelectorAll('.calc').forEach(input => {
-    input.addEventListener('input', calculate);
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.calc').forEach(input => {
+        input.addEventListener('input', calculate);
+    });
+    calculate(); // Initial recalculation if old inputs exist
 });
 
 function calculate() {
@@ -200,6 +214,8 @@ function calculate() {
     document.querySelectorAll('.drysample').forEach((input, index) => {
         if (!isNaN(drcs[index])) {
             input.value = (fresh * (drcs[index] / 100)).toFixed(2);
+        } else {
+            input.value = '';
         }
     });
 }
