@@ -20,15 +20,23 @@ class Plot extends Model
     protected static function booted()
     {
         static::creating(function ($plot) {
-            if (!$plot->user_id && $plot->farmer_id) {
-                $plot->user_id = $plot->farmer_id;
+            // Keep user_id linked to the logged-in user who created the plot
+            if (!$plot->user_id && auth()->check()) {
+                $plot->user_id = auth()->id();
             }
         });
     }
 
+    // Fix: Point to the actual Farmer model
     public function farmer()
     {
-        return $this->belongsTo(User::class, 'farmer_id');
+        return $this->belongsTo(Farmer::class, 'farmer_id');
+    }
+
+    // Optional: Keep a relationship for the User account who registered/manages the plot
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function latexTransactions()
@@ -40,4 +48,5 @@ class Plot extends Model
     {
         return $this->hasMany(ProductionSummary::class);
     }
-}
+
+    }

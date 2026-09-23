@@ -38,13 +38,11 @@
             <div class="relative z-10 w-full">
                 {{-- Centered Logo and Brand Section --}}
                 <div class="flex flex-col items-start mb-10 text-left">
-                    {{-- Large Logo Container - Aligned to the start (left) --}}
                     <div class="p-4 rounded-3xl flex items-center justify-center w-96 h-96">
                         <img src="{{ asset('images/laterx-logo.png') }}" 
                              class="w-full h-full object-contain object-left" 
                              alt="LATER-X Logo">
                     </div>
-                    {{-- Brand Name - Negative margin used to tuck it under the logo --}}
                     <span class="text-6xl font-black tracking-tighter text-white drop-shadow-md -mt-10 ml-4">LATER-X</span>
                 </div>
 
@@ -55,7 +53,6 @@
                         <span class="text-green-400">{{ __('Smart Decisions.') }}</span>
                     </h1>
                     
-                    {{-- Features list remains left-aligned for readability --}}
                     <div class="flex gap-8 text-sm font-medium opacity-80">
                         <div class="flex items-center gap-2">
                             <i class="fa-solid fa-cloud-sun text-green-400"></i> {{ __('Weather Analytics') }}
@@ -93,10 +90,27 @@
                         <p class="text-gray-500">{{ __('Manage your plantation data.') }}</p>
                     </div>
 
+                    {{-- Session Status / Timeout Alert --}}
+                    @if (session('status'))
+                        <div class="p-4 mb-6 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+                            <i class="fa-solid fa-clock-rotate-left text-amber-500"></i>
+                            <span>{{ session('status') }}</span>
+                        </div>
+                    @endif
+
+                    {{-- General Error Alert --}}
                     @if(session('error'))
                         <div class="p-4 mb-6 text-sm text-red-600 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3">
                             <i class="fa-solid fa-circle-exclamation"></i>
-                            {{ session('error') }}
+                            <span>{{ session('error') }}</span>
+                        </div>
+                    @endif
+
+                    {{-- Form Validation Errors --}}
+                    @if ($errors->any())
+                        <div class="p-4 mb-6 text-sm text-red-600 rounded-xl bg-red-50 border border-red-100 flex items-center gap-3">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            <span>{{ $errors->first() }}</span>
                         </div>
                     @endif
 
@@ -118,7 +132,7 @@
                         </div>
 
                         {{-- Password Field Group --}}
-                        <div>
+                        <div x-data="{ showPassword: false }">
                             <div class="flex justify-between mb-2">
                                 <label id="password-label" for="password" class="text-xs font-bold text-gray-400 uppercase tracking-wider">{{ __('Password') }}</label>
                                 <a href="{{ route('password.request') }}" class="text-xs font-bold text-green-600 hover:text-green-700">
@@ -129,10 +143,24 @@
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
                                     <i class="fa-solid fa-lock"></i>
                                 </span>
-                                <input type="password" name="password" id="password" required
-                                       autocomplete="current-password" aria-labelledby="password-label"
-                                       class="w-full pl-11 pr-4 py-3 bg-gray-50 border-gray-200 rounded-xl focus:bg-white focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none"
+                                
+                                {{-- Password Input with dynamic type toggle --}}
+                                <input :type="showPassword ? 'text' : 'password'" 
+                                       name="password" 
+                                       id="password" 
+                                       required
+                                       autocomplete="current-password" 
+                                       aria-labelledby="password-label"
+                                       class="w-full pl-11 pr-11 py-3 bg-gray-50 border-gray-200 rounded-xl focus:bg-white focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all outline-none"
                                        placeholder="••••••••">
+
+                                {{-- Toggle Password Visibility Button --}}
+                                <button type="button" 
+                                        @click="showPassword = !showPassword"
+                                        aria-label="Toggle password visibility"
+                                        class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 focus:outline-none">
+                                    <i class="fa-solid" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                </button>
                             </div>
                         </div>
 

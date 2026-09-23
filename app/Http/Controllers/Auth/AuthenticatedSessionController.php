@@ -12,8 +12,13 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create()
+    public function create(Request $request)
     {
+        // Check if redirected from a browser timeout
+        if ($request->has('timeout')) {
+            session()->flash('status', 'Your session timed out due to inactivity. Please log in again.');
+        }
+
         return view('auth.login');
     }
 

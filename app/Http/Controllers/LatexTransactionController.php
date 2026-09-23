@@ -1,5 +1,5 @@
 <?php
-// app/Http/Controllers/LatexTransactionController.php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -17,6 +17,7 @@ class LatexTransactionController extends Controller
 {
     public function index(Request $request)
     {
+        // 1. Build query for main transactions list
         $query = LatexTransaction::query()
             ->select([
                 'id', 'plot_id', 'user_id', 'transaction_date', 'location', 
@@ -24,54 +25,89 @@ class LatexTransactionController extends Controller
                 'price_per_kg', 'total_amount', 'quality_classification'
             ])
             ->with([
-                'plot:id,plot_location,farmer_id',
+                'plot:id,plot_location,code,farmer_id',
                 'plot.farmer:id,name',
                 'user:id,name'
             ]);
 
-        // Apply Filter Parameters
+        // Filter transactions by transaction_date year
+        if ($request->filled('year')) {
+            $query->whereYear('transaction_date', $request->year);
+        }
+
+        // Filter transactions by Plot
         if ($request->filled('plot_id')) {
             $query->where('plot_id', $request->plot_id);
         }
 
+        // Filter transactions by Farmer
         if ($request->filled('farmer_id')) {
             $query->whereHas('plot', function ($q) use ($request) {
                 $q->where('farmer_id', $request->farmer_id);
             });
         }
 
-        // Paginate transactions (25 records per page)
-        $transactions = $query->latest('transaction_date')->paginate(25);
+        // Paginate transactions list (uses default 'page' query parameter)
+        $transactions = $query->latest('transaction_date')
+            ->paginate(25)
+            ->withQueryString();
 
-        // Calculate aggregated totals per plot directly in SQL database
-        $totals = DB::table('latex_transactions')
-            ->join('plots', 'latex_transactions.plot_id', '=', 'plots.id')
-            ->join('farmers', 'plots.farmer_id', '=', 'farmers.id')
+        // 2. Build aggregated totals query per plot with custom pagination
+        $totalsQuery = DB::table('latex_transactions')
+            ->leftJoin('plots', 'latex_transactions.plot_id', '=', 'plots.id')
+            ->leftJoin('farmers', 'plots.farmer_id', '=', 'farmers.id')
             ->select(
+                'plots.id as plot_id',
                 'plots.plot_location',
-                'plots.code as plot_code', // <--- Make sure this line is present
+                'plots.code as plot_code',
+                'plots.plot_size_rai',
                 'farmers.name as farmer_name',
-                DB::raw('SUM(dry_rubber_weight_kg) as total_dry_rubber'),
-                DB::raw('SUM(total_amount) as total_income')
-            )
-            ->groupBy('plots.id', 'plots.plot_location', 'plots.code', 'farmers.name')
-            ->get();
+                DB::raw('COALESCE(SUM(latex_transactions.dry_rubber_weight_kg), 0) as total_dry_rubber'),
+                DB::raw('COALESCE(SUM(latex_transactions.total_amount), 0) as total_income')
+            );
 
-        // Load filter options efficiently
-        $plots = Plot::select('id', 'plot_location', 'plot_size_rai', 'farmer_id')
+        // Filter totals by transaction_date year
+        if ($request->filled('year')) {
+            $totalsQuery->whereYear('latex_transactions.transaction_date', $request->year);
+        }
+
+        // Filter totals by Plot
+        if ($request->filled('plot_id')) {
+            $totalsQuery->where('latex_transactions.plot_id', $request->plot_id);
+        }
+
+        // Filter totals by Farmer
+        if ($request->filled('farmer_id')) {
+            $totalsQuery->where('plots.farmer_id', $request->farmer_id);
+        }
+
+        // Grouping and Paginating 10 items per page with custom page parameter 'totals_page'
+        $totals = $totalsQuery
+            ->groupBy('plots.id', 'plots.plot_location', 'plots.code', 'plots.plot_size_rai', 'farmers.name')
+            ->paginate(10, ['*'], 'totals_page')
+            ->withQueryString();
+
+        // 3. Extract distinct years from transaction_date
+        $years = LatexTransaction::whereNotNull('transaction_date')
+            ->selectRaw('YEAR(transaction_date) as year')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->pluck('year');
+
+        // 4. Load options for remaining filter dropdowns
+        $plots = Plot::select('id', 'code', 'plot_location', 'plot_size_rai', 'farmer_id')
             ->with('farmer:id,name')
             ->get();
 
         $farmers = Farmer::select('id', 'name')->get();
 
-        return view('transactions.index', compact('transactions', 'totals', 'plots', 'farmers'));
+        return view('transactions.index', compact('transactions', 'totals', 'plots', 'farmers', 'years'));
     }
 
     public function create()
     {
         $plots = Plot::with('farmer')->get();
 
-        // Single view for Admin and Staff
         return view('transactions.create', compact('plots'));
     }
 
@@ -97,7 +133,7 @@ class LatexTransactionController extends Controller
         $drcSamples = array_filter([$request->drc_sample_1, $request->drc_sample_2, $request->drc_sample_3], fn($v) => $v !== null);
         $avgDRC = count($drcSamples) ? array_sum($drcSamples) / count($drcSamples) : 0;
 
-        // Average dry weight
+        // Average dry weight calculation
         $drySamples = array_filter([$request->dry_sample_1, $request->dry_sample_2, $request->dry_sample_3], fn($v) => $v !== null);
         $avgDryWeight = count($drySamples) ? array_sum($drySamples) / count($drySamples) : ($freshWeight * ($avgDRC / 100));
 
@@ -122,13 +158,11 @@ class LatexTransactionController extends Controller
 
         $this->updateProductionSummary($transaction);
 
-        // Redirect to transactions page for both Admin and Staff
         return redirect()->route('transactions.create')->with('success', 'Transaction saved successfully.');
     }
 
     private function updateProductionSummary(LatexTransaction $transaction)
     {
-        $plot = $transaction->plot;
         $year = ProductionYear::where('start_date', '<=', $transaction->transaction_date)
             ->where('end_date', '>=', $transaction->transaction_date)
             ->first();
@@ -137,7 +171,7 @@ class LatexTransactionController extends Controller
 
         $summary = ProductionSummary::firstOrCreate(
             [
-                'plot_id' => $plot->id,
+                'plot_id' => $transaction->plot_id,
                 'production_year_id' => $year->id
             ],
             [
@@ -147,15 +181,15 @@ class LatexTransactionController extends Controller
         );
 
         // Recalculate totals
-        $transactions = LatexTransaction::where('plot_id', $plot->id)
+        $totals = LatexTransaction::where('plot_id', $transaction->plot_id)
             ->whereBetween('transaction_date', [$year->start_date, $year->end_date])
-            ->get();
+            ->selectRaw('SUM(dry_rubber_weight_kg) as total_weight, SUM(total_amount) as total_amount')
+            ->first();
 
-        $summary->dry_rubber_weight_kg = $transactions->sum(fn($t) => $t->volume_kg * ($t->dry_rubber_content / 100));
-        $summary->total_amount_baht = $transactions->sum('total_amount');
+        $summary->dry_rubber_weight_kg = $totals->total_weight ?? 0;
+        $summary->total_amount_baht = $totals->total_amount ?? 0;
         $summary->save();
     }
-
 
     public function import(Request $request)
     {
@@ -189,22 +223,11 @@ class LatexTransactionController extends Controller
 
     public function uploadExcel(Request $request)
     {
-        $request->validate([
-            'excel_file' => 'required|mimes:xlsx,xls,csv|max:10240',
-        ]);
-
-        try {
-            Excel::import(new LatexProductionImport, $request->file('excel_file'));
-
-            return redirect()->back()->with('success', 'Data Integrated Successfully.');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to import data: ' . $e->getMessage());
-        }
+        return $this->import($request);
     }
 
     public function showImportForm()
     {
-        // Renders resources/views/latex/import.blade.php
         return view('latex.import');
     }
 }

@@ -51,6 +51,11 @@
                     <span>{{ __('Dashboard') }}</span>
                 </a>
 
+                <a href="{{ route('dss.yield-sales') }}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all {{ request()->routeIs('dss.*') ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50' : 'text-emerald-100/80 hover:bg-emerald-900/50 hover:text-white' }}">
+                    <i class="fa-solid fa-calculator text-sm w-5 text-center"></i>
+                    <span>{{ __('Yield & Sales DSS') }}</span>
+                </a>
+
                 <a href="{{ route('transactions.index') }}"
                    class="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all {{ request()->routeIs('transactions.index') ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50' : 'text-emerald-100/80 hover:bg-emerald-900/50 hover:text-white' }}">
                     <i class="fa-solid fa-flask text-sm w-5 text-center"></i>

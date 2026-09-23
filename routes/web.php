@@ -11,6 +11,7 @@ use App\Http\Controllers\PlotController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\ProductionController;
+use App\Models\Plot;
 
 // Redirect '/' to login page
 Route::get('/', fn() => redirect()->route('login'));
@@ -42,7 +43,7 @@ Route::middleware(['auth', 'approved'])->group(function () {
     Route::get('/plots/create', [PlotController::class, 'create'])->name('plots.create');
     Route::post('/plots', [PlotController::class, 'store'])->name('plots.store');
     Route::get('/plots/{plot}/edit', [PlotController::class, 'edit'])->name('plots.edit');
-    Route::match(['put', 'patch'], '/plots/{plot}', [PlotController::class, 'update'])->name('plots.update'); // Supports PUT and PATCH
+    Route::match(['put', 'patch'], '/plots/{plot}', [PlotController::class, 'update'])->name('plots.update');
     Route::delete('/plots/{plot}', [PlotController::class, 'destroy'])->name('plots.destroy');
 
     // Farmers view - CHANGED NAME TO 'main.farmer.index' TO AVOID CLASH
@@ -59,6 +60,12 @@ Route::middleware(['auth', 'approved'])->group(function () {
     // Excel Download Action
     Route::get('/reports/fresh-rubber/download', [DashboardController::class, 'exportFreshRubberReport'])
         ->name('reports.fresh-rubber.export');
+
+    // PANEL RECOMMENDATION ENDPOINTS (DSS & Yield Forecasting)
+    Route::get('/api/dss/yield-sales-per-lot', [DashboardController::class, 'apiYieldAndSalesPerLot'])
+        ->name('api.dss.yield-sales');
+    Route::get('/api/dss/forecast-production', [DashboardController::class, 'apiForecastProduction'])
+        ->name('api.dss.forecast');
 });
 
 // Admin-only routes
@@ -120,7 +127,16 @@ Route::middleware(['auth'])->group(function () {
     // Transactions list view
     Route::get('/latex-transactions', [LatexTransactionController::class, 'index'])
         ->name('latex.index');
+
+    Route::get('/dss/yield-sales', function () {
+        return view('dss.yield-sales');
+    })->name('dss.yield-sales')->middleware(['auth']);
+
+    Route::get('/yield-per-plot/{plot_id}', [\App\Http\Controllers\Api\DecisionSupportApiController::class, 'getYieldPerPlot']);
+    Route::post('/calculate-revenue', [\App\Http\Controllers\Api\DecisionSupportApiController::class, 'calculateRevenueProjection']);
 });
+
+
 
 // Include auth routes
 require __DIR__ . '/auth.php';
