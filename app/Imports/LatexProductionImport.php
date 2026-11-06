@@ -13,13 +13,23 @@ use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
-use Symfony\Component\Process\Process;
+use Maatwebsite\Excel\Concerns\WithCalculatedFormulas;
+use Maatwebsite\Excel\Concerns\SkipsOnFailure;
+use Maatwebsite\Excel\Concerns\SkipsFailures;
 
-class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchInserts, WithChunkReading
+class LatexProductionImport implements 
+    ToCollection, 
+    WithHeadingRow, 
+    WithBatchInserts, 
+    WithChunkReading, 
+    WithCalculatedFormulas,
+    SkipsOnFailure
 {
+    use SkipsFailures;
+
     protected ?int $defaultPlotId;
 
-    // Cache instances in memory to eliminate duplicate SELECT/INSERT queries
+    // Cache to minimize DB calls during batch loops
     protected array $farmersCache = [];
     protected array $plotsCache = [];
 
@@ -39,7 +49,6 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
         $lastLocation = null;
         $currentUserId = Auth::id() ?? 1;
 
-        // Safely fetch or create default fallback farmer
         $defaultFarmer = $this->getOrCreateFarmer('Default Farmer', 'default_farmer@example.com');
 
         foreach ($rows as $row) {
@@ -51,7 +60,6 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
                 // ====================================================
                 // TEMPLATE 1: FARMER DIRECT FORMAT
                 // ====================================================
-
                 $dateVal = $row['date'] ?? $rawArray[0] ?? null;
                 if (!empty($dateVal)) {
                     $lastDate = $this->transformDate($dateVal);
@@ -59,15 +67,22 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
                 $transactionDate = $lastDate ?? now()->format('Y-m-d H:i:s');
 
                 $farmerName = isset($row['farmer']) ? trim((string)$row['farmer']) : ($rawArray[1] ?? null);
-                $volumeKg = $this->parseNumeric(
-                    $row['net_weight_1'] ?? $row['net_weight'] ?? $rawArray[2] ?? $rawArray[3] ?? null
-                );
+                
+                $volumeKg = $this->parseNumeric($row['net_weight_1'] ?? $row['net_weight'] ?? null);
+                if ($volumeKg === null || $volumeKg <= 0) {
+                    foreach ([$rawArray[2] ?? null, $rawArray[3] ?? null, $rawArray[4] ?? null] as $possibleWeight) {
+                        $val = $this->parseNumeric($possibleWeight);
+                        if ($val !== null && $val > 0) {
+                            $volumeKg = $val;
+                            break;
+                        }
+                    }
+                }
 
                 if (empty($farmerName) && ($volumeKg === null || $volumeKg <= 0)) {
                     continue;
                 }
 
-                // Match or Create Farmer with unique email generation
                 if (!empty($farmerName)) {
                     $cleanEmailName = strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '_', $farmerName)));
                     $uniqueHash = substr(md5($farmerName), 0, 6);
@@ -78,7 +93,6 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
                     $farmer = $defaultFarmer;
                 }
 
-                // Match or Create Plot
                 $plot = null;
                 if ($this->defaultPlotId) {
                     $plot = Plot::find($this->defaultPlotId);
@@ -91,33 +105,27 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
                 $avgDrc = $this->parseNumeric($row['drc'] ?? $rawArray[3] ?? $rawArray[4] ?? null) ?? 0;
                 $dryRubberWeightKg = $this->parseNumeric($row['dry_rubber_weight'] ?? $rawArray[5] ?? null);
 
+                // Fallback computation if formula calculation was skipped
                 if (($dryRubberWeightKg === null || $dryRubberWeightKg <= 0) && $volumeKg > 0 && $avgDrc > 0) {
                     $dryRubberWeightKg = ($volumeKg * $avgDrc) / 100;
                 }
 
-                $totalAmount = $this->parseNumeric($row['amount'] ?? $rawArray[6] ?? null);
-                $wage = $this->parseNumeric($row['wage'] ?? $rawArray[7] ?? null);
-                $labor = isset($row['labor']) ? trim((string)$row['labor']) : ($rawArray[8] ?? null);
+                $totalAmount = $this->parseNumeric($row['amount'] ?? $rawArray[6] ?? null) ?? 0;
                 $pricePerKg = ($dryRubberWeightKg > 0 && $totalAmount > 0) ? ($totalAmount / $dryRubberWeightKg) : 45.00;
-
-                $predictionLabel = $this->runBertInference($plot->code ?? 'FARMER-DIRECT', $volumeKg ?? 0, $avgDrc);
 
                 LatexTransaction::updateOrCreate(
                     [
-                        'plot_id'          => $plot->id,
-                        'transaction_date' => $transactionDate,
+                        'plot_id'            => $plot->id,
+                        'transaction_date'   => $transactionDate,
+                        'dry_rubber_content' => round($avgDrc, 2),
                     ],
                     [
-                        'user_id'                => $plot->user_id ?? $currentUserId,
-                        'location'               => $plot->plot_location ?? 'Krabi Province',
-                        'volume_kg'              => $volumeKg ?? 0,
-                        'dry_rubber_content'     => round($avgDrc, 2),
-                        'dry_rubber_weight_kg'   => round($dryRubberWeightKg ?? 0, 2),
-                        'price_per_kg'           => round($pricePerKg, 2),
-                        'total_amount'           => round($totalAmount ?? (($dryRubberWeightKg ?? 0) * $pricePerKg), 2),
-                        'wage'                   => $wage,
-                        'labor_info'             => $labor,
-                        'quality_classification' => $predictionLabel,
+                        'user_id'              => $plot->user_id ?? $currentUserId,
+                        'location'             => $plot->plot_location ?? 'Krabi Province',
+                        'volume_kg'            => $volumeKg ?? 0,
+                        'dry_rubber_weight_kg' => round($dryRubberWeightKg ?? 0, 2),
+                        'price_per_kg'         => round($pricePerKg, 2),
+                        'total_amount'         => round($totalAmount, 2),
                     ]
                 );
 
@@ -125,7 +133,6 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
                 // ====================================================
                 // TEMPLATE 2: STANDARD LOG FORMAT
                 // ====================================================
-
                 $dateVal = $row['date'] ?? $rawArray[0] ?? null;
                 if (!empty($dateVal)) {
                     $lastDate = $this->transformDate($dateVal);
@@ -136,14 +143,20 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
                     $lastLocation = trim((string)$locationVal);
                 }
 
-                $plotCode = isset($row['plot_code']) ? strtoupper(trim((string)$row['plot_code'])) : (isset($rawArray[2]) ? strtoupper(trim((string)$rawArray[2])) : null);
+                $plotCode = isset($row['plot_code']) 
+                    ? strtoupper(trim((string)$row['plot_code'])) 
+                    : (isset($rawArray[2]) ? strtoupper(trim((string)$rawArray[2])) : null);
+                
                 $volumeKg = $this->parseNumeric($row['fresh_wt_kg'] ?? $rawArray[3] ?? null);
 
                 if (empty($plotCode) || $volumeKg === null || $volumeKg <= 0) {
                     continue;
                 }
 
-                $farmerName = isset($row['farmer']) ? trim((string)$row['farmer']) : (isset($row['farmer_name']) ? trim((string)$row['farmer_name']) : null);
+                $farmerName = isset($row['farmer']) 
+                    ? trim((string)$row['farmer']) 
+                    : (isset($row['farmer_name']) ? trim((string)$row['farmer_name']) : null);
+                
                 if (!empty($farmerName)) {
                     $cleanEmailName = strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '_', $farmerName)));
                     $uniqueHash = substr(md5($farmerName), 0, 6);
@@ -176,37 +189,32 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
                 }
 
                 $transactionDate = $lastDate ?? now()->format('Y-m-d H:i:s');
-                $predictionLabel = $this->runBertInference($plotCode, $volumeKg, $avgDrc);
 
                 LatexTransaction::updateOrCreate(
                     [
                         'plot_id'          => $plot->id,
                         'transaction_date' => $transactionDate,
+                        'dry_rubber_content' => round($avgDrc, 2),
                     ],
                     [
-                        'user_id'                => $plot->user_id ?? $currentUserId,
-                        'location'               => $locationName,
-                        'volume_kg'              => $volumeKg,
-                        'dry_rubber_content'     => round($avgDrc, 2),
-                        'drc_sample_1'           => $drc1,
-                        'drc_sample_2'           => $drc2,
-                        'drc_sample_3'           => $drc3,
-                        'dry_sample_1'           => $dry1,
-                        'dry_sample_2'           => $dry2,
-                        'dry_sample_3'           => $dry3,
-                        'dry_rubber_weight_kg'   => round($dryRubberWeightKg, 2),
-                        'price_per_kg'           => $pricePerKg,
-                        'total_amount'           => round($dryRubberWeightKg * $pricePerKg, 2),
-                        'quality_classification' => $predictionLabel,
+                        'user_id'              => $plot->user_id ?? $currentUserId,
+                        'location'             => $locationName,
+                        'volume_kg'            => $volumeKg,
+                        'drc_sample_1'         => $drc1,
+                        'drc_sample_2'         => $drc2,
+                        'drc_sample_3'         => $drc3,
+                        'dry_sample_1'         => $dry1,
+                        'dry_sample_2'         => $dry2,
+                        'dry_sample_3'         => $dry3,
+                        'dry_rubber_weight_kg' => round($dryRubberWeightKg, 2),
+                        'price_per_kg'         => $pricePerKg,
+                        'total_amount'         => round($dryRubberWeightKg * $pricePerKg, 2),
                     ]
                 );
             }
         }
     }
 
-    /**
-     * Cache farmer records in memory and lookup by Name OR Email to avoid unique constraint key collisions.
-     */
     private function getOrCreateFarmer(string $name, string $email): Farmer
     {
         if (isset($this->farmersCache[$name])) {
@@ -214,16 +222,11 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
         }
 
         $farmer = DB::transaction(function () use ($name, $email) {
-            // 1. Check if farmer exists by name OR by email
-            $existing = Farmer::where('name', $name)
-                ->orWhere('email', $email)
-                ->first();
-
+            $existing = Farmer::where('name', $name)->orWhere('email', $email)->first();
             if ($existing) {
                 return $existing;
             }
 
-            // 2. Safely create if no conflict exists
             return Farmer::create([
                 'name'  => $name,
                 'email' => $email,
@@ -234,9 +237,6 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
         return $farmer;
     }
 
-    /**
-     * Cache plot records in memory and auto-retry transactions on DB deadlocks
-     */
     private function getOrCreatePlot(string $code, int $farmerId, int $userId, string $location): Plot
     {
         if (isset($this->plotsCache[$code])) {
@@ -249,7 +249,7 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
                 [
                     'farmer_id'     => $farmerId,
                     'user_id'       => $userId,
-                    'plot_location'  => $location,
+                    'plot_location' => $location,
                     'plot_size_rai' => 0.00,
                 ]
             );
@@ -264,35 +264,15 @@ class LatexProductionImport implements ToCollection, WithHeadingRow, WithBatchIn
         if (is_null($value)) {
             return null;
         }
+
         $str = trim((string)$value);
-        if ($str === '' || $str === '-' || $str === '–') {
+
+        if ($str === '' || $str === '-' || $str === '–' || str_starts_with($str, '=')) {
             return null;
         }
+
+        $str = str_replace(',', '', $str);
         return is_numeric($str) ? floatval($str) : null;
-    }
-
-    private function runBertInference($plotCode, $volumeKg, $avgDrc): string
-    {
-        try {
-            $process = new Process([
-                'python',
-                base_path('scripts/predict_yield.py'),
-                $plotCode,
-                (string)$volumeKg,
-                (string)round($avgDrc, 2),
-            ]);
-
-            $process->run();
-
-            if ($process->isSuccessful()) {
-                $output = json_decode($process->getOutput(), true);
-                return $output['prediction'] ?? 'Standard Yield - Normal Quality';
-            }
-        } catch (\Exception $e) {
-            // Fallback rule
-        }
-
-        return 'Standard Yield - Normal Quality';
     }
 
     private function transformDate($value)

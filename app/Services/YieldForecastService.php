@@ -15,33 +15,47 @@ class YieldForecastService
         float $estimatedDrc,
         float $targetPricePerKg
     ): array {
-        $plot = Plot::findOrFail($plotId);
+        $plot = Plot::with('latexTransactions')->findOrFail($plotId);
 
-        // 1. Plot & Yield calculations
-        $plotSizeRai = $plot->plot_size_rai ?? 1;
-        $yieldDensityPerRai = $plot->yield_density_kg_per_rai ?? 15.0;
+        // 1. Plot Size Handling
+        $plotSizeRai = (float) ($plot->plot_size_rai > 0 ? $plot->plot_size_rai : 1.0);
 
-        // 2. Seasonal Multiplier
+        // 2. Compute Yield Density Dynamic (Fallback to 15.0 if no transaction history)
+        $totalDryWeight = $plot->latexTransactions->sum('dry_rubber_weight_kg');
+        $totalHarvests = $plot->latexTransactions->count();
+
+        if ($totalHarvests > 0 && $plotSizeRai > 0) {
+            // Average dry rubber yield per tapping session per Rai
+            $yieldDensityPerRai = ($totalDryWeight / $totalHarvests) / $plotSizeRai;
+        } else {
+            // Fallback default density per Rai (kg/Rai per day)
+            $yieldDensityPerRai = 15.0;
+        }
+
+        // 3. Seasonal Adjustment Multiplier
         $month = Carbon::parse($targetHarvestDate)->month;
         $seasonalMultiplier = match (true) {
-            in_array($month, [10, 11, 12, 1]) => 1.25, // High yield season
-            in_array($month, [2, 3, 4])       => 0.75, // Low yield / defoliation season
-            default                          => 1.00,
+            in_array($month, [10, 11, 12, 1]) => 1.25, // High-yield peak season
+            in_array($month, [2, 3, 4])       => 0.75, // Low-yield defoliation / wintering season
+            default                           => 1.00,
         };
 
-        // 3. Projections
-        $dailyRawKg = $yieldDensityPerRai * $plotSizeRai * $seasonalMultiplier;
+        // 4. Forecast Math Calculations
+        // Estimated daily raw latex (kg) considering DRC conversion
+        $drcFactor = $estimatedDrc > 0 ? ($estimatedDrc / 100) : 0.32;
+        $dailyDryKg = $yieldDensityPerRai * $plotSizeRai * $seasonalMultiplier;
+        $dailyRawKg = $dailyDryKg / $drcFactor;
+
         $projectedRawLatexKg = round($dailyRawKg * $scheduledTappingDays, 2);
-        
-        $projectedDryRubberKg = round($projectedRawLatexKg * ($estimatedDrc / 100), 2);
+        $projectedDryRubberKg = round($projectedRawLatexKg * $drcFactor, 2);
         $projectedRevenue = round($projectedDryRubberKg * $targetPricePerKg, 2);
 
-        // 4. Feasibility Completion Rate
+        // 5. Target Completion Rate
         $completionRate = $targetRevenueGoal > 0 
             ? round(($projectedRevenue / $targetRevenueGoal) * 100, 2) 
-            : 100;
+            : 100.0;
 
-        // 5. DSS Advisory
+        // 6. DSS Advisory Generation
         if ($completionRate >= 100) {
             $status = 'optimal';
             $message = "Goal achievable! Projected income (฿" . number_format($projectedRevenue, 2) . ") exceeds target goal of ฿" . number_format($targetRevenueGoal, 2) . " across {$scheduledTappingDays} tapping days.";

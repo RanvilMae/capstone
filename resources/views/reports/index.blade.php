@@ -131,6 +131,29 @@
         $sumAmount = $transactions->sum('total_amount');
         $totalLabor = $transactions->count();
         $avgDrc = $sumVolume > 0 ? ($sumDryRubber / $sumVolume) * 100 : 0;
+
+        // --- Minimal DSS Advisory Logic ---
+        $dssStatus = 'standard'; // default: standard, warning, optimal
+        $dssTitle = __('Standard Harvest Advisory');
+        $dssMessage = __('Market conditions and quality levels are currently within average operational parameters.');
+
+        if ($transactions->count() === 0) {
+            $dssStatus = 'standard';
+            $dssTitle = __('No Sales Data');
+            $dssMessage = __('Select a period with recorded transactions to generate decision advisory insights.');
+        } elseif ($avgDrc < 30) {
+            $dssStatus = 'warning';
+            $dssTitle = __('Quality Advisory: Low DRC Detected');
+            $dssMessage = __('Average DRC is below 30% (' . number_format($avgDrc, 1) . '%). Consider processing raw latex into unsmoked sheets or extending coagulation time to improve profit margin.');
+        } elseif ($avgDrc >= 33 && $avgPrice >= 50) {
+            $dssStatus = 'optimal';
+            $dssTitle = __('Optimal Selling Window');
+            $dssMessage = __('High rubber content (' . number_format($avgDrc, 1) . '%) paired with strong market pricing (฿' . number_format($avgPrice, 2) . '/kg). Recommended action: Maximize immediate field sale.');
+        } elseif ($avgPrice < 45) {
+            $dssStatus = 'warning';
+            $dssTitle = __('Price Advisory: Low Market Price');
+            $dssMessage = __('Average selling price (฿' . number_format($avgPrice, 2) . '/kg) is low. Suggest holding inventory as cup lump or sheet rubber until regional demand improves.');
+        }
     @endphp
 
     <!-- Summary Cards -->
@@ -168,6 +191,43 @@
             <div class="mt-1 flex items-baseline justify-between">
                 <span class="text-2xl font-extrabold text-gray-900">{{ number_format($totalLabor) }}</span>
                 <span class="text-sm font-medium text-gray-500">{{ __('people') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Minimal DSS Advisory Banner -->
+    <div class="rounded-lg p-5 border transition-all duration-300 shadow-sm no-print
+        @if($dssStatus === 'optimal') bg-emerald-50 border-emerald-300 text-emerald-950
+        @elseif($dssStatus === 'warning') bg-amber-50 border-amber-300 text-amber-950
+        @else bg-gray-50 border-gray-300 text-gray-800 @endif">
+        <div class="flex items-center justify-between border-b pb-3 mb-3
+            @if($dssStatus === 'optimal') border-emerald-200
+            @elseif($dssStatus === 'warning') border-amber-200
+            @else border-gray-200 @endif">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1.5
+                    @if($dssStatus === 'optimal') bg-emerald-200/80 text-emerald-900
+                    @elseif($dssStatus === 'warning') bg-amber-200/80 text-amber-900
+                    @else bg-gray-200 text-gray-700 @endif">
+                    <i class="fas fa-lightbulb"></i> {{ __('DSS Smart Advisory') }}
+                </span>
+                <h3 class="text-sm font-bold">{{ $dssTitle }}</h3>
+            </div>
+            <span class="text-xs text-gray-500 font-medium hidden sm:inline">{{ __('Automated Market Insights') }}</span>
+        </div>
+
+        <div class="flex items-start gap-3">
+            <div class="mt-0.5 shrink-0 text-lg">
+                @if($dssStatus === 'optimal')
+                    <i class="fas fa-circle-check text-emerald-600"></i>
+                @elseif($dssStatus === 'warning')
+                    <i class="fas fa-triangle-exclamation text-amber-600"></i>
+                @else
+                    <i class="fas fa-circle-info text-gray-500"></i>
+                @endif
+            </div>
+            <div>
+                <p class="text-sm font-medium leading-relaxed">{{ $dssMessage }}</p>
             </div>
         </div>
     </div>

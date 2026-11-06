@@ -91,7 +91,7 @@ class DecisionSupportApiController extends Controller
         $dryRubberWeightKg = $request->estimated_volume_kg * ($request->estimated_drc / 100);
 
         $pricePerKg = $request->target_price_per_kg 
-            ?: (LatexTransaction::latest('transaction_date')->value('price_per_kg') ?? 0.00);
+    ?: (LatexTransaction::latest('transaction_date')->value('price_per_kg') ?? 0.00);
 
         $projectedRevenue = $dryRubberWeightKg * $pricePerKg;
 

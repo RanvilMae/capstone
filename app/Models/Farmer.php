@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Farmer extends Model
 {
+
+    use HasFactory;
+
     protected $fillable = ['name', 'email', 'phone', 'address', 'farm_location', 'farm_size', 'notes'];
 
     public function plots()
